@@ -32,7 +32,6 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: all 0.2s; display: none;
         }
 
-        /* TIMER UI */
         #timer-container {
             display: none; justify-content: space-between; width: 95vw; margin-top: 8px; font-weight: bold; font-size: 14px;
         }
@@ -58,7 +57,29 @@
             grid-template-columns: repeat(28, 40px);
             grid-template-rows: repeat(30, 40px);
             background-color: #f7dc6f; position: relative;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        /* --- LOGIC XOAY BÀN CỜ 180 ĐỘ KHI CẦM QUÂN ĐEN --- */
+        #board.rotate-180 {
+            transform: rotate(180deg);
+        }
+        #board.rotate-180 .piece {
+            /* Giữ cho quân cờ không bị lộn ngược, bóng đổ được lật lại cho chuẩn 3D */
+            transform: rotate(180deg);
+            box-shadow: inset 0 4px 0 rgba(0,0,0,0.3), inset 0 -2px 0 rgba(255,255,255,0.3), 0 -4px 6px rgba(0,0,0,0.4);
+        }
+        #board.rotate-180 .piece.selected {
+            transform: rotate(180deg) scale(1.25) translateY(-4px); 
+            box-shadow: inset 0 4px 0 rgba(0,0,0,0.3), 0 -10px 15px rgba(0,0,0,0.6), 0 0 15px #fff;
+        }
+        #board.rotate-180 .piece.carried {
+            transform: rotate(180deg) scale(0.6) translate(18px, 18px);
+        }
+        #board.rotate-180 .piece.carried.selected {
+            transform: rotate(180deg) scale(0.8) translate(15px, 15px);
+        }
+        /* ----------------------------------------------- */
 
         .cell {
             width: 40px; height: 40px; position: relative;
@@ -109,7 +130,6 @@
         .promo-btn-container { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 0 auto; }
         .promo-btn { background: #3498db; border: 2px solid #2980b9; padding: 10px; border-radius: 8px; color: white; cursor: pointer; width: 45%; max-width: 120px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
         
-        /* UI PHÒNG CHỜ (LOBBY) */
         #lobby-container {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             width: 90vw; max-width: 400px; margin-top: 30px; padding: 25px;
@@ -127,8 +147,6 @@
         
         #waiting-msg { color: #f1c40f; font-size: 18px; margin-top: 15px; display: none; font-weight: bold; }
         #room-code-display { font-size: 32px; letter-spacing: 5px; color: #fff; background: #000; padding: 10px; border-radius: 8px; margin: 10px 0; }
-        
-        /* HIỆU ỨNG QUAY RANDOM */
         #spin-screen { color: #2ecc71; font-size: 20px; font-weight: bold; margin-top: 15px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.3; text-shadow: 0 0 15px #2ecc71; } }
     </style>
@@ -182,7 +200,7 @@
     </div>
 
     <script>
-        // CẤU HÌNH FIREBASE (HÃY THAY THẾ BẰNG PROJECT_ID CỦA BẠN KHI CHẠY THỰC TẾ)
+        // FIREBASE CONFIG (NHỚ THAY BẰNG THÔNG TIN PROJECT CỦA BẠN)
         const firebaseConfig = {
             apiKey: "AIzaSyDlHl7_3oJvsTTRMTL7XbWqkyVYwUodMPc", 
             authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -204,7 +222,6 @@
         let playerName = '';
         let opponentName = '';
 
-        // BIẾN THỜI GIAN
         let timeLimit = 0;
         let timeLeft = { p1: 0, p2: 0 };
         let timerInterval = null;
@@ -235,15 +252,11 @@
 
         const PIECE_VALUES = { 'Vua': 1000, 'Hậu': 90, 'Xe': 50, 'Mã': 30, 'Tượng': 30, 'Tàu': 40, 'ĐạiBàng': 40, 'BắnĐá': 40, 'Tháp': 0, 'Tốt': 10 };
 
-        // ==========================================
-        // QUẢN LÝ LOBBY VÀ MATCHMAKING
-        // ==========================================
         function startPvE() {
             gameMode = 'pve';
             playerName = document.getElementById('player-name').value || 'Người Chơi';
             timeLimit = parseInt(document.getElementById('time-select').value);
             
-            // Chế độ Bot cũng quay random xem ai đi trước
             document.getElementById('waiting-screen').style.display = 'flex';
             document.getElementById('waiting-msg').style.display = 'none';
             document.getElementById('room-code-display').style.display = 'none';
@@ -304,7 +317,6 @@
                     document.getElementById('waiting-msg').style.display = 'none';
                     document.getElementById('spin-screen').style.display = 'block';
                     
-                    // Host tính toán kết quả ngẫu nhiên sau 2.5s quay hiệu ứng
                     if (playerName === data.hostName && !isSpinTriggered) {
                         isSpinTriggered = true;
                         setTimeout(() => {
@@ -316,7 +328,7 @@
                         }, 2500);
                     }
                 } else if (data.status === 'playing') {
-                    db.ref('rooms/' + roomId).off(); // Tắt lắng nghe lobby
+                    db.ref('rooms/' + roomId).off(); 
                     localPlayerRole = (playerName === data.hostName) ? data.roles.host : data.roles.guest;
                     opponentName = (playerName === data.hostName) ? data.guestName : data.hostName;
                     hideLobbyAndStart();
@@ -336,6 +348,13 @@
                 timeLeft.p2 = timeLimit;
             }
 
+            // QUAN TRỌNG: CƠ CHẾ XOAY BÀN CỜ 180 ĐỘ
+            if (localPlayerRole === 'p2') {
+                boardEl.classList.add('rotate-180');
+            } else {
+                boardEl.classList.remove('rotate-180');
+            }
+
             if(gameMode === 'pve') {
                 topSubtitle.innerText = `Đấu với Bot | ${timeLimit ? (timeLimit/60)+' Phút' : 'Không giới hạn'}`;
             } else {
@@ -353,9 +372,6 @@
             location.reload(); 
         }
 
-        // ==========================================
-        // QUẢN LÝ THỜI GIAN (TIMER)
-        // ==========================================
         function startTimer() {
             if (timeLimit === 0 || timerInterval) return;
             timerInterval = setInterval(() => {
@@ -370,7 +386,6 @@
                 if (timeLeft[currentTurn] <= 0) {
                     isGameOver = true;
                     clearInterval(timerInterval);
-                    let winner = currentTurn === 'p1' ? 'p2' : 'p1';
                     
                     if (gameMode === 'pve') {
                         alert(currentTurn === localPlayerRole ? "⏳ HẾT GIỜ! Bạn đã thua!" : "⏳ BOT HẾT GIỜ! Bạn đã thắng!");
@@ -404,9 +419,6 @@
             }
         }
 
-        // ==========================================
-        // ĐỒNG BỘ GAME STATE LÊN FIREBASE
-        // ==========================================
         function syncGameToFirebase() {
             if (gameMode !== 'pvp' || !roomId) return;
             
@@ -417,7 +429,7 @@
                 currentTurn: currentTurn,
                 lockedPieceId: lockedPieceId || "null",
                 isGameOver: isGameOver,
-                timeLeft: timeLeft, // Đồng bộ thời gian còn lại
+                timeLeft: timeLeft, 
                 lastUpdater: localPlayerRole
             });
         }
@@ -456,9 +468,6 @@
             });
         }
 
-        // ==========================================
-        // GAME LOGIC CORE
-        // ==========================================
         function resetGameLogic() {
             currentTurn = 'p1';
             isGameOver = false;
@@ -473,8 +482,11 @@
             updateVision();
             updateTurnUI();
             
-            viewport.scrollTop = localPlayerRole === 'p1' ? viewport.scrollHeight : 0;
-            viewport.scrollLeft = (viewport.scrollWidth - viewport.clientWidth) / 2;
+            // LUÔN CUỘN XUỐNG DƯỚI CÙNG (Vì Bàn cờ xoay 180 độ thì phe mình luôn ở góc dưới màn hình)
+            setTimeout(() => {
+                viewport.scrollTop = viewport.scrollHeight;
+                viewport.scrollLeft = (viewport.scrollWidth - viewport.clientWidth) / 2;
+            }, 100);
 
             if (timeLimit > 0) {
                 updateTimerDisplay();
@@ -484,7 +496,6 @@
             if (gameMode === 'pvp' && localPlayerRole === 'p1') {
                 syncGameToFirebase(); 
             } else if (gameMode === 'pve' && localPlayerRole === 'p2') {
-                // Nếu đánh Bot mà Bot là P1 (Đỏ đi trước) thì cho Bot chạy luôn
                 setTimeout(() => playBotAI(), 800);
             }
         }
