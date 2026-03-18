@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
     <html lang="vi">
     <head>
         <meta charset="UTF-8">
@@ -13,6 +13,9 @@
                 display: flex; flex-direction: column; align-items: center;
                 margin: 0; padding: 0; user-select: none; overflow: hidden;
                 height: 100vh;
+                /* Tối ưu hiệu ứng cuộn và chạm trên mobile */
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
             }
 
             .header-container { 
@@ -57,6 +60,9 @@
                 grid-template-columns: repeat(28, 40px);
                 grid-template-rows: repeat(30, 40px);
                 background-color: #f7dc6f; position: relative;
+                /* Ép trình duyệt sử dụng GPU để xoay bàn cờ mượt hơn */
+                transform-origin: center center;
+                will-change: transform;
                 transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
@@ -65,7 +71,6 @@
                 transform: rotate(180deg);
             }
             #board.rotate-180 .piece {
-                /* Giữ cho quân cờ không bị lộn ngược, bóng đổ được lật lại cho chuẩn 3D */
                 transform: rotate(180deg);
                 box-shadow: inset 0 4px 0 rgba(0,0,0,0.3), inset 0 -2px 0 rgba(255,255,255,0.3), 0 -4px 6px rgba(0,0,0,0.4);
             }
@@ -84,7 +89,9 @@
             .cell {
                 width: 40px; height: 40px; position: relative;
                 box-sizing: border-box; display: flex; justify-content: center; align-items: center;
-                border: 1px solid rgba(0, 0, 0, 0.15); transition: all 0.1s;
+                border: 1px solid rgba(0, 0, 0, 0.1); 
+                /* Ngăn cell tạo lớp layer mới quá nhiều gây tốn RAM */
+                contain: layout paint;
             }
             
             .cell:hover { border: 2px solid #f1c40f; z-index: 8; }
@@ -110,9 +117,12 @@
             .piece {
                 width: 32px; height: 32px; border-radius: 50%; z-index: 10;
                 position: absolute; display: flex; justify-content: center; align-items: center;
-                font-size: 20px; cursor: pointer; transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                font-size: 20px; cursor: pointer; 
                 border: 3px solid rgba(0,0,0,0.5);
                 box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.3), 0 4px 6px rgba(0,0,0,0.4);
+                /* Tối ưu chuyển động cho quân cờ */
+                will-change: transform, opacity;
+                transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             }
             .piece.selected { border-color: #fff; transform: scale(1.25) translateY(-4px); box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3), 0 10px 15px rgba(0,0,0,0.6), 0 0 15px #fff; z-index: 15; }
             .piece.carried { transform: scale(0.6) translate(18px, 18px); z-index: 16; border-width: 2px; }
@@ -155,7 +165,7 @@
 
         <div class="header-container">
             <div class="title-area">
-                <h3 id="top-title">Cờ Vua Sầu Riêng/h3>
+                <h3 id="top-title">Cờ Vua Sầu Riêng</h3>
                 <p id="top-subtitle">PvP Multiplayer Ready!</p>
             </div>
             <button id="btn-leave" onclick="leaveRoom()">🚪 THOÁT</button>
@@ -348,7 +358,6 @@
                     timeLeft.p2 = timeLimit;
                 }
 
-                // QUAN TRỌNG: CƠ CHẾ XOAY BÀN CỜ 180 ĐỘ
                 if (localPlayerRole === 'p2') {
                     boardEl.classList.add('rotate-180');
                 } else {
@@ -482,7 +491,6 @@
                 updateVision();
                 updateTurnUI();
                 
-                // LUÔN CUỘN XUỐNG DƯỚI CÙNG (Vì Bàn cờ xoay 180 độ thì phe mình luôn ở góc dưới màn hình)
                 setTimeout(() => {
                     viewport.scrollTop = viewport.scrollHeight;
                     viewport.scrollLeft = (viewport.scrollWidth - viewport.clientWidth) / 2;
@@ -588,6 +596,8 @@
 
             function buildBoard() {
                 boardEl.innerHTML = '';
+                // Sử dụng Fragment để giảm số lần trình duyệt vẽ lại (Reflow/Repaint)
+                const fragment = document.createDocumentFragment();
                 for (let r = 0; r < ROWS; r++) {
                     cells[r] = [];
                     for (let c = 0; c < COLS; c++) {
@@ -609,10 +619,11 @@
                         cell.appendChild(glow);
 
                         cell.addEventListener('click', (e) => handleCellClick(e, r, c));
-                        boardEl.appendChild(cell);
+                        fragment.appendChild(cell);
                         cells[r][c] = cell;
                     }
                 }
+                boardEl.appendChild(fragment);
             }
 
             function renderPieces() {
@@ -1027,7 +1038,7 @@
                         if (piece.player === 'p2' && dr < 0) return false; 
 
                         if (isAttack) {
-                            let canSee = piece.player === localPlayerRole ? cells[targetR][targetC].classList.contains('visible') : botVisionGrid[targetR][targetC];
+                            let canSee = piece.player === localPlayerRole ? cells[targetR][targetC].classList.contains('visible') : (botVisionGrid ? botVisionGrid[targetR][targetC] : false);
                             if (!canSee || Math.max(absR, absC) > 10) return false; 
                             
                             let obsCount = countObstacles(piece.r, piece.c, targetR, targetC);
