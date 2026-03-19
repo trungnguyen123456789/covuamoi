@@ -13,7 +13,6 @@
                 display: flex; flex-direction: column; align-items: center;
                 margin: 0; padding: 0; user-select: none; overflow: hidden;
                 height: 100vh;
-                /* Tối ưu hiệu ứng cuộn và chạm trên mobile */
                 -webkit-tap-highlight-color: transparent;
                 touch-action: manipulation;
             }
@@ -35,6 +34,12 @@
                 box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: all 0.2s; display: none;
             }
 
+            #btn-replay {
+                background-color: #3498db; color: white; border: none; padding: 6px 12px;
+                font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: all 0.2s; display: none; margin-right: 10px;
+            }
+
             #timer-container {
                 display: none; justify-content: space-between; width: 95vw; margin-top: 8px; font-weight: bold; font-size: 14px;
             }
@@ -48,11 +53,31 @@
                 box-shadow: 0 0 10px #e74c3c; transition: all 0.3s; display: none;
             }
 
+            #replay-controls {
+                display: none; align-items: center; justify-content: center; gap: 15px; margin-top: 8px; width: 95vw; z-index: 50;
+            }
+            .btn-rep { background: #2ecc71; color: white; border: none; padding: 6px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+            .btn-rep:active { background: #27ae60; }
+
             #viewport {
                 flex-grow: 1; width: 100vw; height: auto; overflow: auto;
-                border: 4px solid #2c3e50; border-radius: 8px; margin-top: 8px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.7); background-color: #0d1117;
+                background-color: #0d1117;
                 -webkit-overflow-scrolling: touch; display: none;
+            }
+
+            /* BỌC BÀN CỜ SÁT RẠT */
+            #board-wrapper {
+                position: relative;
+                background-color: #1a1a1a;
+                border: 4px solid #34495e;
+                padding: 30px; /* Khu vực vẽ Tọa độ */
+                border-radius: 12px;
+                margin: 20px auto; 
+                width: fit-content;
+                box-sizing: border-box;
+                will-change: transform;
+                transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.7);
             }
 
             #board {
@@ -60,37 +85,31 @@
                 grid-template-columns: repeat(28, 40px);
                 grid-template-rows: repeat(30, 40px);
                 background-color: #f7dc6f; position: relative;
-                /* Ép trình duyệt sử dụng GPU để xoay bàn cờ mượt hơn */
-                transform-origin: center center;
-                will-change: transform;
-                transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+                border: 2px solid #000;
+                box-shadow: 0 0 15px rgba(0,0,0,0.5);
             }
 
-            /* --- LOGIC XOAY BÀN CỜ 180 ĐỘ KHI CẦM QUÂN ĐEN --- */
-            #board.rotate-180 {
-                transform: rotate(180deg);
-            }
-            #board.rotate-180 .piece {
+            #board-wrapper.rotate-180 { transform: rotate(180deg); }
+            #board-wrapper.rotate-180 .piece {
                 transform: rotate(180deg);
                 box-shadow: inset 0 4px 0 rgba(0,0,0,0.3), inset 0 -2px 0 rgba(255,255,255,0.3), 0 -4px 6px rgba(0,0,0,0.4);
             }
-            #board.rotate-180 .piece.selected {
-                transform: rotate(180deg) scale(1.25) translateY(-4px); 
-                box-shadow: inset 0 4px 0 rgba(0,0,0,0.3), 0 -10px 15px rgba(0,0,0,0.6), 0 0 15px #fff;
-            }
-            #board.rotate-180 .piece.carried {
-                transform: rotate(180deg) scale(0.6) translate(18px, 18px);
-            }
-            #board.rotate-180 .piece.carried.selected {
-                transform: rotate(180deg) scale(0.8) translate(15px, 15px);
-            }
-            /* ----------------------------------------------- */
+            #board-wrapper.rotate-180 .coord { transform: rotate(180deg); }
+            
+            .piece.carrier { transform: translateX(8px); }
+            .piece.carrier.selected { transform: scale(1.25) translate(6px, -4px); }
+            .piece.carried { transform: scale(0.6) translateX(-16px); z-index: 16; border-width: 2px; }
+            .piece.carried.selected { transform: scale(0.8) translate(-12px, -4px); z-index: 17; }
+
+            #board-wrapper.rotate-180 .piece.carrier { transform: rotate(180deg) translateX(-8px); }
+            #board-wrapper.rotate-180 .piece.carrier.selected { transform: rotate(180deg) scale(1.25) translate(-6px, -4px); }
+            #board-wrapper.rotate-180 .piece.carried { transform: rotate(180deg) scale(0.6) translateX(16px); }
+            #board-wrapper.rotate-180 .piece.carried.selected { transform: rotate(180deg) scale(0.8) translate(12px, -4px); z-index: 17; }
 
             .cell {
                 width: 40px; height: 40px; position: relative;
                 box-sizing: border-box; display: flex; justify-content: center; align-items: center;
                 border: 1px solid rgba(0, 0, 0, 0.1); 
-                /* Ngăn cell tạo lớp layer mới quá nhiều gây tốn RAM */
                 contain: layout paint;
             }
             
@@ -107,12 +126,29 @@
             .ocean, .river { background-color: #3498db; background-image: linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent); background-size: 20px 20px; }
             .bridge { background-color: #a1887f; background-image: repeating-linear-gradient(90deg, transparent, transparent 5px, rgba(0,0,0,0.2) 5px, rgba(0,0,0,0.2) 6px); border-top: 3px solid #6d4c41; border-bottom: 3px solid #6d4c41; }
             .mountain { background-color: #555; background-image: linear-gradient(135deg, #444 25%, transparent 25%, transparent 50%, #444 50%, #444 75%, transparent 75%, transparent); background-size: 15px 15px; box-shadow: inset 0 0 15px rgba(0,0,0,0.8); }
+            .port { background-color: #a0522d; background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2) 75%, transparent 75%, transparent); background-size: 15px 15px; border: 2px solid #5d4037; box-shadow: inset 0 0 10px rgba(0,0,0,0.7); }
+
+            /* CSS Căn chỉnh Tọa Độ sát viền */
+            .coord {
+                position: absolute;
+                display: flex; justify-content: center; align-items: center;
+                font-size: 14px; font-weight: bold; color: #f1c40f;
+                pointer-events: none;
+                transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .coord-top { top: 0; width: 40px; height: 30px; }
+            .coord-bottom { bottom: 0; width: 40px; height: 30px; } 
+            .coord-left { left: 0; width: 30px; height: 40px; }
+            .coord-right { right: 0; width: 30px; height: 40px; }
 
             .fog { position: absolute; inset: 0; background-color: rgba(0, 0, 0, 0.7); z-index: 5; transition: opacity 0.3s ease; pointer-events: none; }
             .cell.visible .fog { opacity: 0; }
             .cell.shrouded .fog { opacity: 1; }
             .cell.visible { box-shadow: inset 0 0 10px rgba(255,255,255,0.1); }
             .death-glow { position: absolute; inset: 0; box-shadow: inset 0 0 20px rgba(241, 196, 15, 0.5); z-index: 4; pointer-events: none; }
+            
+            .check-glow { position: absolute; inset: 0; box-shadow: inset 0 0 25px rgba(255, 0, 0, 0.9); z-index: 6; pointer-events: none; animation: pulseRed 1s infinite alternate; }
+            @keyframes pulseRed { from { opacity: 0.3; } to { opacity: 1; } }
 
             .piece {
                 width: 32px; height: 32px; border-radius: 50%; z-index: 10;
@@ -120,13 +156,10 @@
                 font-size: 20px; cursor: pointer; 
                 border: 3px solid rgba(0,0,0,0.5);
                 box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.3), 0 4px 6px rgba(0,0,0,0.4);
-                /* Tối ưu chuyển động cho quân cờ */
                 will-change: transform, opacity;
                 transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             }
             .piece.selected { border-color: #fff; transform: scale(1.25) translateY(-4px); box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3), 0 10px 15px rgba(0,0,0,0.6), 0 0 15px #fff; z-index: 15; }
-            .piece.carried { transform: scale(0.6) translate(18px, 18px); z-index: 16; border-width: 2px; }
-            .piece.carried.selected { transform: scale(0.8) translate(15px, 15px); }
 
             .boom { position: absolute; inset: 0; background-color: #ff4757; border-radius: 50%; animation: explode 0.5s ease-out forwards; z-index: 20; pointer-events: none; }
             @keyframes explode { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
@@ -136,9 +169,29 @@
 
             #promo-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center; }
             #promo-box { background: #2c3e50; padding: 15px; border-radius: 12px; text-align: center; border: 3px solid #f1c40f; width: 90vw; }
-            #promo-box h3 { color: #f1c40f; margin-top: 0; font-size: 18px;}
-            .promo-btn-container { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 0 auto; }
-            .promo-btn { background: #3498db; border: 2px solid #2980b9; padding: 10px; border-radius: 8px; color: white; cursor: pointer; width: 45%; max-width: 120px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+            
+            /* MENU MỚI - GỌN GÀNG NẰM BÊN CẠNH QUÂN */
+            #piece-selector-menu {
+                position: fixed;
+                background: rgba(44, 62, 80, 0.95);
+                border: 2px solid #f1c40f;
+                border-radius: 12px;
+                display: none;
+                flex-direction: column;
+                padding: 8px;
+                gap: 8px;
+                z-index: 9999;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.8), 0 0 15px rgba(241, 196, 15, 0.4);
+                backdrop-filter: blur(5px);
+            }
+            .selector-btn {
+                background: #34495e; border: 1px solid #7f8c8d; outline: none;
+                color: white; font-size: 16px; cursor: pointer;
+                padding: 6px 15px; border-radius: 6px; transition: 0.2s;
+                display: flex; align-items: center; justify-content: flex-start; gap: 10px;
+                font-weight: bold;
+            }
+            .selector-btn:hover { background: #f1c40f; color: #000; border-color: #f39c12; }
             
             #lobby-container {
                 display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -168,12 +221,15 @@
                 <h3 id="top-title">Cờ Vua Sầu Riêng</h3>
                 <p id="top-subtitle">PvP Multiplayer Ready!</p>
             </div>
-            <button id="btn-leave" onclick="leaveRoom()">🚪 THOÁT</button>
+            <div style="display: flex;">
+                <button id="btn-replay" onclick="startReplay()">🎥 XEM LẠI</button>
+                <button id="btn-leave" onclick="leaveRoom()">🚪 THOÁT</button>
+            </div>
         </div>
 
         <div id="lobby-container">
             <h2 style="color: #f1c40f; margin-bottom: 5px;">CHỌN CHẾ ĐỘ</h2>
-            <input type="text" id="player-name" class="lobby-input" placeholder="Nhập tên của bạn" value="Kỳ Thủ Ẩn Danh">
+            <input type="text" id="player-name" class="lobby-input" placeholder="Nhập tên của bạn">
             
             <select id="time-select" class="lobby-input" style="background: #e67e22; border: none; font-weight: bold; cursor: pointer;">
                 <option value="0">⏳ Không giới hạn thời gian</option>
@@ -204,22 +260,30 @@
         </div>
 
         <div id="turn-indicator">LƯỢT CỦA BẠN (ĐỎ)</div>
+
+        <div id="replay-controls">
+            <button class="btn-rep" onclick="prevReplayStep()">⏮ Trước</button>
+            <span id="replay-step-text" style="color: white; font-weight: bold; font-size: 16px;">0 / 0</span>
+            <button class="btn-rep" onclick="nextReplayStep()">Sau ⏭</button>
+        </div>
         
         <div id="viewport">
-            <div id="board"></div>
+            <div id="board-wrapper">
+                <div id="board"></div>
+            </div>
         </div>
 
         <script>
             const firebaseConfig = {
-    apiKey: "AIzaSyDlHl7_3oJvsTTRMTL7XbWqkyVYwUodMPc",
-    authDomain: "daichienlophoc-4fd60.firebaseapp.com",
-    databaseURL: "https://daichienlophoc-4fd60-default-rtdb.firebaseio.com",
-    projectId: "daichienlophoc-4fd60",
-    storageBucket: "daichienlophoc-4fd60.firebasestorage.app",
-    messagingSenderId: "593810974640",
-    appId: "1:593810974640:web:abbf1ee61e1f97ff1e1875",
-    measurementId: "G-JQPETDMRLX"
-    };
+                apiKey: "AIzaSyDlHl7_3oJvsTTRMTL7XbWqkyVYwUodMPc",
+                authDomain: "daichienlophoc-4fd60.firebaseapp.com",
+                databaseURL: "https://daichienlophoc-4fd60-default-rtdb.firebaseio.com",
+                projectId: "daichienlophoc-4fd60",
+                storageBucket: "daichienlophoc-4fd60.firebasestorage.app",
+                messagingSenderId: "593810974640",
+                appId: "1:593810974640:web:abbf1ee61e1f97ff1e1875",
+                measurementId: "G-JQPETDMRLX"
+            };
             
             if (!firebase.apps.length) {
                 firebase.initializeApp(firebaseConfig);
@@ -236,7 +300,12 @@
             let timeLeft = { p1: 0, p2: 0 };
             let timerInterval = null;
 
+            let gameHistory = [];
+            let isReplaying = false;
+            let currentReplayIndex = 0;
+
             const boardEl = document.getElementById('board');
+            const boardWrapperEl = document.getElementById('board-wrapper');
             const turnInd = document.getElementById('turn-indicator');
             const timerContainer = document.getElementById('timer-container');
             const timerP1 = document.getElementById('timer-p1');
@@ -262,9 +331,72 @@
 
             const PIECE_VALUES = { 'Vua': 1000, 'Hậu': 90, 'Xe': 50, 'Mã': 30, 'Tượng': 30, 'Tàu': 40, 'ĐạiBàng': 40, 'BắnĐá': 40, 'Tháp': 0, 'Tốt': 10 };
 
-            function startPvE() {
+            function saveCurrentState() {
+                if (isReplaying) return;
+                gameHistory.push({
+                    pieces: JSON.parse(JSON.stringify(pieces)),
+                    deadVisions: JSON.parse(JSON.stringify(deadVisions)),
+                    destroyedTowers: JSON.parse(JSON.stringify(destroyedTowers)),
+                    currentTurn: currentTurn
+                });
+            }
+
+            function startReplay() {
+                isReplaying = true;
+                document.getElementById('replay-controls').style.display = 'flex';
+                document.getElementById('btn-replay').style.display = 'none';
+                document.getElementById('turn-indicator').style.display = 'none';
+                document.getElementById('timer-container').style.display = 'none';
+                
+                currentReplayIndex = 0;
+                loadReplayState(currentReplayIndex);
+            }
+
+            function loadReplayState(index) {
+                if (index < 0 || index >= gameHistory.length) return;
+                let state = gameHistory[index];
+                pieces = JSON.parse(JSON.stringify(state.pieces));
+                deadVisions = JSON.parse(JSON.stringify(state.deadVisions));
+                destroyedTowers = JSON.parse(JSON.stringify(state.destroyedTowers));
+                currentTurn = state.currentTurn;
+                document.getElementById('replay-step-text').innerText = `Bước ${index + 1} / ${gameHistory.length}`;
+                
+                updateVision(); 
+                
+                if (isReplaying) {
+                    for (let r = 0; r < ROWS; r++) {
+                        for (let c = 0; c < COLS; c++) {
+                            cells[r][c].classList.add('visible');
+                            cells[r][c].classList.remove('shrouded');
+                        }
+                    }
+                }
+            }
+
+            function prevReplayStep() {
+                if (currentReplayIndex > 0) {
+                    currentReplayIndex--;
+                    loadReplayState(currentReplayIndex);
+                }
+            }
+
+            function nextReplayStep() {
+                if (currentReplayIndex < gameHistory.length - 1) {
+                    currentReplayIndex++;
+                    loadReplayState(currentReplayIndex);
+                }
+            }
+
+          function startPvE() {
+                // Kiểm tra tên
+                let inputName = document.getElementById('player-name').value.trim();
+                if (inputName === '') {
+                    alert("Vui lòng nhập tên của bạn trước khi chơi!");
+                    return; // Chặn không cho chạy tiếp
+                }
+                playerName = inputName;
+                
                 gameMode = 'pve';
-                playerName = document.getElementById('player-name').value || 'Người Chơi';
                 timeLimit = parseInt(document.getElementById('time-select').value);
                 
                 document.getElementById('waiting-screen').style.display = 'flex';
@@ -279,7 +411,14 @@
             }
 
             function createRoom() {
-                playerName = document.getElementById('player-name').value || 'Chủ Phòng';
+                // Kiểm tra tên
+                let inputName = document.getElementById('player-name').value.trim();
+                if (inputName === '') {
+                    alert("Vui lòng nhập tên của bạn trước khi tạo phòng!");
+                    return;
+                }
+                playerName = inputName;
+                
                 roomId = Math.floor(100000 + Math.random() * 900000).toString();
                 gameMode = 'pvp';
                 timeLimit = parseInt(document.getElementById('time-select').value);
@@ -298,7 +437,14 @@
             }
 
             function joinRoom() {
-                playerName = document.getElementById('player-name').value || 'Người Chơi 2';
+                // Kiểm tra tên
+                let inputName = document.getElementById('player-name').value.trim();
+                if (inputName === '') {
+                    alert("Vui lòng nhập tên của bạn trước khi vào phòng!");
+                    return;
+                }
+                playerName = inputName;
+                
                 let inputCode = document.getElementById('room-code-input').value.trim();
                 if (inputCode.length !== 6) { alert("Mã phòng phải có 6 số!"); return; }
                 
@@ -316,7 +462,6 @@
                     }
                 });
             }
-
             let isSpinTriggered = false;
             function listenToRoomLobby() {
                 db.ref('rooms/' + roomId).on('value', snap => {
@@ -359,9 +504,9 @@
                 }
 
                 if (localPlayerRole === 'p2') {
-                    boardEl.classList.add('rotate-180');
+                    boardWrapperEl.classList.add('rotate-180');
                 } else {
-                    boardEl.classList.remove('rotate-180');
+                    boardWrapperEl.classList.remove('rotate-180');
                 }
 
                 if(gameMode === 'pve') {
@@ -395,6 +540,8 @@
                     if (timeLeft[currentTurn] <= 0) {
                         isGameOver = true;
                         clearInterval(timerInterval);
+                        saveCurrentState();
+                        document.getElementById('btn-replay').style.display = 'block';
                         
                         if (gameMode === 'pve') {
                             alert(currentTurn === localPlayerRole ? "⏳ HẾT GIỜ! Bạn đã thua!" : "⏳ BOT HẾT GIỜ! Bạn đã thắng!");
@@ -455,6 +602,7 @@
                         isGameOver = data.isGameOver;
                         
                         if (data.timeLeft) timeLeft = data.timeLeft;
+                        saveCurrentState();
                         
                         updateVision();
                         updateTurnUI();
@@ -462,6 +610,7 @@
 
                         if (isGameOver) {
                             clearInterval(timerInterval);
+                            document.getElementById('btn-replay').style.display = 'block';
                             if(timeLeft[currentTurn] <= 0) {
                                 alert("⏳ ĐỐI THỦ HẾT GIỜ! Chúc mừng bạn đã thắng!");
                             } else {
@@ -491,6 +640,9 @@
                 updateVision();
                 updateTurnUI();
                 
+                gameHistory = [];
+                saveCurrentState();
+
                 setTimeout(() => {
                     viewport.scrollTop = viewport.scrollHeight;
                     viewport.scrollLeft = (viewport.scrollWidth - viewport.clientWidth) / 2;
@@ -578,7 +730,7 @@
                 ];
             }
 
-        function initMap() {
+            function initMap() {
                 for (let r = 0; r < ROWS; r++) {
                     mapData[r] = [];
                     for (let c = 0; c < COLS; c++) {
@@ -592,17 +744,52 @@
                         if ((r === 14 || r === 15) && c >= 12 && c <= 15) mapData[r][c] = 'mountain';
                     }
                 }
+                // Thiết lập đúng tọa độ các Cảng theo yêu cầu
+                mapData[0][2] = 'port';   // C30
+                mapData[0][25] = 'port';  // Z30
+                mapData[29][2] = 'port';  // C1 (C0)
+                mapData[29][25] = 'port'; // Z1 (Z0)
             }
 
             function buildBoard() {
                 boardEl.innerHTML = '';
-                // Sử dụng Fragment để giảm số lần trình duyệt vẽ lại (Reflow/Repaint)
+                document.querySelectorAll('.coord').forEach(el => el.remove());
+                
+                // THÊM TỌA ĐỘ CHỮ & SỐ NẰM GỌN TRONG VIỀN BẢN ĐỒ
+                const letters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB'];
+                for(let c = 0; c < COLS; c++) {
+                    let topL = document.createElement('div');
+                    topL.className = 'coord coord-top';
+                    topL.style.left = (c * 40 + 30) + 'px'; 
+                    topL.innerText = letters[c];
+                    boardWrapperEl.appendChild(topL);
+
+                    let botL = document.createElement('div');
+                    botL.className = 'coord coord-bottom';
+                    botL.style.left = (c * 40 + 30) + 'px';
+                    botL.innerText = letters[c];
+                    boardWrapperEl.appendChild(botL);
+                }
+                for(let r = 0; r < ROWS; r++) {
+                    let leftL = document.createElement('div');
+                    leftL.className = 'coord coord-left';
+                    leftL.style.top = (r * 40 + 30) + 'px';
+                    leftL.innerText = (ROWS - r);
+                    boardWrapperEl.appendChild(leftL);
+
+                    let rightL = document.createElement('div');
+                    rightL.className = 'coord coord-right';
+                    rightL.style.top = (r * 40 + 30) + 'px';
+                    rightL.innerText = (ROWS - r);
+                    boardWrapperEl.appendChild(rightL);
+                }
+
                 const fragment = document.createDocumentFragment();
                 for (let r = 0; r < ROWS; r++) {
                     cells[r] = [];
                     for (let c = 0; c < COLS; c++) {
                         let cell = document.createElement('div');
-                        if (['forest', 'hill', 'mountain', 'ocean', 'river', 'bridge'].includes(mapData[r][c])) {
+                        if (['forest', 'hill', 'mountain', 'ocean', 'river', 'bridge', 'port'].includes(mapData[r][c])) {
                             cell.className = `cell ${mapData[r][c]}`;
                         } else {
                             cell.className = `cell ${(r + c) % 2 === 0 ? 'ground-light' : 'ground-dark'}`;
@@ -649,7 +836,7 @@
                     if (p.isDead) return;
                     
                     let isVisible = false;
-                    if (p.player === localPlayerRole || isGameOver) {
+                    if (p.player === localPlayerRole || isGameOver || isReplaying) {
                         isVisible = true;
                     } else {
                         let cellVisible = cells[p.r][p.c].classList.contains('visible');
@@ -664,7 +851,8 @@
 
                     if (isVisible) {
                         let pieceDiv = document.createElement('div');
-                        pieceDiv.className = `piece ${p.player} ${p.carriedBy ? 'carried' : ''}`;
+                        let isCarrier = pieces.some(child => child.carriedBy === p.id && !child.isDead);
+                        pieceDiv.className = `piece ${p.player} ${p.carriedBy ? 'carried' : ''} ${isCarrier ? 'carrier' : ''}`;
                         pieceDiv.innerText = p.icon;
                         pieceDiv.dataset.id = p.id;
                         if (selectedPieceId === p.id) pieceDiv.classList.add('selected');
@@ -703,7 +891,7 @@
                 return pieces.some(p => p.r === r && p.c === c && !p.isDead && !p.carriedBy);
             }
 
-            function isPathClear(r1, c1, r2, c2) {
+            function isPathClear(piece, r1, c1, r2, c2) {
                 let absR = Math.abs(r2 - r1), absC = Math.abs(c2 - c1);
                 if (absR !== 0 && absC !== 0 && absR !== absC) return true; 
 
@@ -717,7 +905,7 @@
                 return true;
             }
 
-            function isWrapPathClear(r1, c1, r2, c2, wrapDc) {
+            function isWrapPathClear(r1, c1, r2, c2, wrapDc, isOceanWrap = false) {
                 let absR = Math.abs(r2 - r1);
                 let absC = Math.abs(wrapDc);
                 if (absR !== 0 && absC !== 0 && absR !== absC) return true; 
@@ -726,17 +914,20 @@
                 let stepC = Math.sign(wrapDc); 
                 
                 let currR = r1 + dr;
-                let currC = c1;
                 
                 function getNextC(c, step) {
-                    let nc = c + step;
-                    if (nc < 3 && step < 0) return 24 + (nc - 2); 
-                    if (nc > 24 && step > 0) return 3 + (nc - 25); 
-                    return nc;
+                    if (isOceanWrap) {
+                        return (c + step + 28) % 28;
+                    } else {
+                        let nc = c + step;
+                        if (nc < 3 && step < 0) return 24 + (nc - 2); 
+                        if (nc > 24 && step > 0) return 3 + (nc - 25); 
+                        return nc;
+                    }
                 }
 
+                let currC = getNextC(c1, stepC);
                 let steps = Math.max(absR, absC);
-                currC = getNextC(currC, stepC);
 
                 for (let i = 1; i < steps; i++) {
                     if (hasPieceAt(currR, currC)) return false;
@@ -746,23 +937,33 @@
                 return true;
             }
 
-            function countObstacles(r1, c1, r2, c2) {
+            function countObstacles(r1, c1, r2, c2, wrapDc = null, isOceanWrap = false) {
                 let absR = Math.abs(r2 - r1);
-                let absC = Math.abs(c2 - c1);
+                let dc = wrapDc !== null ? wrapDc : (c2 - c1);
+                let absC = Math.abs(dc);
                 if (absR !== 0 && absC !== 0 && absR !== absC) return 0; 
 
                 let dr = Math.sign(r2 - r1);
-                let dc = Math.sign(c2 - c1);
-                let currR = r1 + dr;
-                let currC = c1 + dc;
-                let count = 0;
-                let safeCounter = 0;
+                let stepC = Math.sign(dc);
                 
-                while ((currR !== r2 || currC !== c2) && safeCounter < 50) {
+                function getNextC(c, step) {
+                    if (wrapDc === null) return c + step;
+                    if (isOceanWrap) return (c + step + 28) % 28;
+                    let nc = c + step;
+                    if (nc < 3 && step < 0) return 24 + (nc - 2); 
+                    if (nc > 24 && step > 0) return 3 + (nc - 25); 
+                    return nc;
+                }
+
+                let currR = r1 + dr;
+                let currC = getNextC(c1, stepC);
+                let count = 0;
+                let steps = Math.max(absR, absC);
+                
+                for (let i = 1; i < steps; i++) {
                     if (hasPieceAt(currR, currC)) count++;
                     currR += dr;
-                    currC += dc;
-                    safeCounter++;
+                    currC = getNextC(currC, stepC);
                 }
                 return count;
             }
@@ -816,8 +1017,6 @@
                         return; 
                     }
 
-                    if (p.type !== 'Tốt' && !p.hasMoved && selectedPieceId !== p.id) return;
-
                     let isPieceInForest = mapData[p.r][p.c] === 'forest';
                     let isCarriedByThap = p.carriedBy && pieces.find(t => t.id === p.carriedBy).type === 'Tháp';
 
@@ -857,6 +1056,7 @@
                         }
 
                         let isWrapPiece = ['Tốt', 'Mã'].includes(p.type);
+                        let isOceanPiece = p.type === 'Tàu' || p.type === 'BắnĐá' || p.type === 'ĐạiBàng' || mapData[p.r][p.c] === 'ocean';
 
                         for (let dr = -v; dr <= v; dr++) {
                             for (let dc = -v; dc <= v; dc++) {
@@ -873,13 +1073,16 @@
                                             nc = origNc; 
                                         }
                                     }
+                                } else if (isOceanPiece) {
+                                    if (origNc < 0) nc = origNc + 28;
+                                    else if (origNc >= COLS) nc = origNc - 28;
                                 }
 
                                 if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
                                     if (Math.max(Math.abs(dr), Math.abs(dc)) <= v) {
                                         if (canIlluminate(p.r, p.c, nr, nc)) {
                                             grid[nr][nc] = true;
-                                            if (nc === origNc) {
+                                            if (nc === origNc || isOceanPiece) {
                                                 stealthGrid[nr][nc] = true;
                                             }
                                         }
@@ -889,6 +1092,18 @@
                         }
                     }
                 });
+
+                let livingEagles = pieces.filter(p => p.type === 'ĐạiBàng' && !p.isDead);
+                if (livingEagles.length === 0) {
+                    for (let r = 0; r < ROWS; r++) {
+                        for (let c = 0; c < COLS; c++) {
+                            if (mapData[r][c] !== 'forest') {
+                                grid[r][c] = true;
+                            }
+                        }
+                    }
+                }
+
                 return { grid, stealthGrid };
             }
 
@@ -912,7 +1127,15 @@
                 let terrain = mapData[targetR][targetC];
                 let forward = piece.player === 'p1' ? -1 : 1;
                 
+                let targetFriendlyObj = pieces.find(p => p.r === targetR && p.c === targetC && p.player === piece.player && !p.isDead && !p.carriedBy);
+                let actualTargetEnemy = pieces.find(p => p.r === targetR && p.c === targetC && !p.isDead && p.carriedBy == null);
+
+                if (piece.canDisembark) {
+                    return Math.max(absR, absC) <= 1 && terrain !== 'ocean' && terrain !== 'river' && !targetFriendlyObj && !actualTargetEnemy;
+                }
+
                 let isWrapMove = false;
+                let isOceanWrapMove = false;
                 let effectiveAbsC = absC;
                 let effectiveDc = dc;
 
@@ -920,68 +1143,118 @@
                 let targetInForest = terrain === 'forest';
 
                 if (['Tốt', 'Mã'].includes(piece.type) && inForest && targetInForest) {
-                    let wrapDc1 = dc + 22;
-                    let wrapDc2 = dc - 22;
-                    
+                    let wrapDc1 = dc + 22; let wrapDc2 = dc - 22;
                     if (Math.abs(wrapDc1) < effectiveAbsC) {
-                        effectiveAbsC = Math.abs(wrapDc1);
-                        effectiveDc = wrapDc1;
-                        isWrapMove = true;
+                        effectiveAbsC = Math.abs(wrapDc1); effectiveDc = wrapDc1; isWrapMove = true;
                     } else if (Math.abs(wrapDc2) < effectiveAbsC) {
-                        effectiveAbsC = Math.abs(wrapDc2);
-                        effectiveDc = wrapDc2;
-                        isWrapMove = true;
+                        effectiveAbsC = Math.abs(wrapDc2); effectiveDc = wrapDc2; isWrapMove = true;
+                    }
+                } 
+                else if (['Tàu', 'BắnĐá', 'ĐạiBàng'].includes(piece.type)) {
+                    let wrapDc1 = dc + 28; let wrapDc2 = dc - 28;
+                    if (Math.abs(wrapDc1) < effectiveAbsC) {
+                        effectiveAbsC = Math.abs(wrapDc1); effectiveDc = wrapDc1; isWrapMove = true; isOceanWrapMove = true;
+                    } else if (Math.abs(wrapDc2) < effectiveAbsC) {
+                        effectiveAbsC = Math.abs(wrapDc2); effectiveDc = wrapDc2; isWrapMove = true; isOceanWrapMove = true;
                     }
                 }
 
-                let targetFriendlyObj = pieces.find(p => p.r === targetR && p.c === targetC && p.player === piece.player && !p.isDead && !p.carriedBy);
+                let isWater = (terrain === 'ocean' || terrain === 'river');
+                let isShoreAttack = false;
+                // FIX LỖI CRASH Ở ĐÂY: Dùng actualTargetEnemy thay vì targetPiece bị undefine
+                if (isAttack && actualTargetEnemy && actualTargetEnemy.type === 'Tàu' && ['ocean', 'river'].includes(mapData[actualTargetEnemy.r][actualTargetEnemy.c])) {
+                    if (!['Tàu', 'ĐạiBàng', 'BắnĐá'].includes(piece.type)) {
+                        if (Math.max(absR, effectiveAbsC) === 1) {
+                            isShoreAttack = true; 
+                        }
+                    }
+                }
+
                 let isBoardingFromDistance = false;
                 let isBishopInTower = piece.type === 'Tượng' && piece.carriedBy && pieces.find(p => p.id === piece.carriedBy).type === 'Tháp';
 
-                let actualTargetEnemy = pieces.find(p => p.r === targetR && p.c === targetC && !p.isDead && p.carriedBy == null);
-                if (!isAttack && actualTargetEnemy && actualTargetEnemy.player !== piece.player) {
-                    return false; 
-                }
-
+                if (!isAttack && actualTargetEnemy && actualTargetEnemy.player !== piece.player) return false; 
                 if (!isAttack && targetFriendlyObj) {
-                    if (isBishopInTower && targetFriendlyObj.type !== 'Tháp') {
-                        return true; 
-                    }
-
+                    if (isBishopInTower && targetFriendlyObj.type !== 'Tháp') return true; 
                     if (['Tàu', 'Xe', 'Mã', 'Tháp'].includes(targetFriendlyObj.type)) {
                         if (piece.type === 'Tháp') return false; 
-                        
                         let isFull = pieces.some(p => p.carriedBy === targetFriendlyObj.id && !p.isDead);
                         if (isFull) return false;
-                        
-                        if (Math.max(absR, absC) <= 1) return true; 
+                        if (Math.max(absR, effectiveAbsC) <= 1) return true; 
                         isBoardingFromDistance = true; 
-                    } else {
-                        return false; 
-                    }
+                    } else return false; 
                 }
                 if (piece.type === 'Tháp') return false; 
-
-                let isWater = (terrain === 'ocean' || terrain === 'river');
-                if (piece.type === 'Tàu' && !isWater) return false; 
-                if (piece.type !== 'Tàu' && piece.type !== 'ĐạiBàng' && isWater) return false; 
+                
+                // Chặn Quân Bờ xuống nước
+                if (!isBoardingFromDistance) {
+                    if (piece.type === 'Tàu' && !isWater && terrain !== 'port' && !isAttack) return false;
+                    if (piece.type !== 'Tàu' && piece.type !== 'ĐạiBàng' && isWater) {
+                        if (!(piece.type === 'BắnĐá' && isAttack) && !isShoreAttack) {
+                            return false;
+                        }
+                    }
+                }
 
                 if ((piece.type === 'ĐạiBàng' || piece.type === 'BắnĐá') && terrain === 'forest' && !(isBoardingFromDistance && targetFriendlyObj && targetFriendlyObj.type==='Tháp')) {
                     return false;
                 }
 
                 let isLineMove = (absR === 0 || effectiveAbsC === 0 || absR === effectiveAbsC);
+                
+                let isWaterBlocked = false;
+                if (!['ĐạiBàng', 'Tàu'].includes(piece.type) && !(piece.type === 'BắnĐá' && isAttack)) {
+                    if (isWater && !isBoardingFromDistance && !isShoreAttack) {
+                        isWaterBlocked = true; 
+                    }
+                    
+                    if (!isWaterBlocked && isLineMove) {
+                        let sdr = Math.sign(dr), sdc = Math.sign(effectiveDc);
+                        let cr = piece.r + sdr, cc = piece.c;
+                        function getNextCol(c, step) {
+                             if(isOceanWrapMove) return (c + step + 28) % 28;
+                             if(isWrapMove) {
+                                 let nc = c + step;
+                                 if (nc < 3 && step < 0) return 24 + (nc - 2); 
+                                 if (nc > 24 && step > 0) return 3 + (nc - 25); 
+                                 return nc;
+                             }
+                             return c + step;
+                        }
+                        cc = getNextCol(cc, sdc);
+                        let steps = Math.max(absR, effectiveAbsC);
+                        for(let i = 1; i < steps; i++) {
+                            let pathTerrain = mapData[cr][cc];
+                            if (pathTerrain === 'river' || pathTerrain === 'ocean') { isWaterBlocked = true; break; }
+                            cr += sdr; cc = getNextCol(cc, sdc);
+                        }
+                    }
+                }
+                if (isWaterBlocked) return false; 
+
                 let pathClearCheck = true;
-                if (isBoardingFromDistance) {
-                    pathClearCheck = isPathClear(piece.r, piece.c, targetR, targetC);
-                } else if (isWrapMove) {
-                    pathClearCheck = isWrapPathClear(piece.r, piece.c, targetR, targetC, effectiveDc);
-                } else if (isLineMove) {
-                    pathClearCheck = isPathClear(piece.r, piece.c, targetR, targetC);
+                if (!['ĐạiBàng', 'BắnĐá', 'Mã', 'Tàu'].includes(piece.type)) {
+                    let startHill = mapData[piece.r][piece.c] === 'hill';
+                    let endHill = terrain === 'hill';
+                    if (startHill !== endHill && Math.max(absR, effectiveAbsC) > 1) return false;
+                    
+                    if (isLineMove && Math.max(absR, effectiveAbsC) > 1 && !isWrapMove && !isBoardingFromDistance) {
+                        let sdr = Math.sign(dr), sdc = Math.sign(effectiveDc);
+                        let cr = piece.r + sdr, cc = piece.c + sdc;
+                        let steps = 0;
+                        while ((cr !== targetR || cc !== targetC) && steps < 30) {
+                            if (mapData[cr][cc] === 'hill' !== startHill) return false;
+                            cr += sdr; cc += sdc; steps++;
+                        }
+                    }
                 }
 
+                if (isBoardingFromDistance) pathClearCheck = isPathClear(piece, piece.r, piece.c, targetR, targetC);
+                else if (isWrapMove) pathClearCheck = isWrapPathClear(piece.r, piece.c, targetR, targetC, effectiveDc, isOceanWrapMove);
+                else if (isLineMove) pathClearCheck = isPathClear(piece, piece.r, piece.c, targetR, targetC);
+
                 switch (piece.type) {
-                    case 'Vua': return absR <= 1 && absC <= 1;
+                    case 'Vua': return absR <= 1 && effectiveAbsC <= 1;
                     
                     case 'Tốt': 
                         let isPastRiver = piece.player === 'p1' ? piece.r <= 14 : piece.r >= 15;
@@ -1017,20 +1290,19 @@
                     
                     case 'Hậu': 
                         let hauLimit = mapData[piece.r][piece.c] === 'forest' ? 3 : 8;
-                        return isLineMove && Math.max(absR, absC) <= hauLimit && pathClearCheck;
+                        return isLineMove && Math.max(absR, effectiveAbsC) <= hauLimit && pathClearCheck;
                     case 'Xe': 
                         let xeLimit = mapData[piece.r][piece.c] === 'forest' ? 2 : 8;
-                        return (absR === 0 || absC === 0) && Math.max(absR, absC) <= xeLimit && pathClearCheck;
+                        return (absR === 0 || effectiveAbsC === 0) && Math.max(absR, effectiveAbsC) <= xeLimit && pathClearCheck;
                     case 'Tượng': 
                         let tuongLimit = mapData[piece.r][piece.c] === 'forest' ? 1 : 8;
-                        return (absR === absC) && absR <= tuongLimit && pathClearCheck;
+                        return (absR === effectiveAbsC) && absR <= tuongLimit && pathClearCheck;
                     case 'Mã': 
-                        if (isAttack) return (absR === 2 && effectiveAbsC === 1) || (absR === 1 && effectiveAbsC === 2) || (absR === 3 && effectiveAbsC === 1) || (absR === 1 && effectiveAbsC === 3);
                         return (absR === 2 && effectiveAbsC === 1) || (absR === 1 && effectiveAbsC === 2);
                     
                     case 'ĐạiBàng':
-                        if (isAttack) return absR <= 1 && absC <= 1; 
-                        else return Math.max(absR, absC) <= 7; 
+                        if (isAttack) return absR <= 1 && effectiveAbsC <= 1; 
+                        else return Math.max(absR, effectiveAbsC) <= 7; 
                     
                     case 'BắnĐá':
                         if (!isLineMove) return false; 
@@ -1039,26 +1311,32 @@
 
                         if (isAttack) {
                             let canSee = piece.player === localPlayerRole ? cells[targetR][targetC].classList.contains('visible') : (botVisionGrid ? botVisionGrid[targetR][targetC] : false);
-                            if (!canSee || Math.max(absR, absC) > 10) return false; 
+                            if (!canSee || Math.max(absR, effectiveAbsC) > 10) return false; 
                             
-                            let obsCount = countObstacles(piece.r, piece.c, targetR, targetC);
+                            let obsCount = countObstacles(piece.r, piece.c, targetR, targetC, isWrapMove ? effectiveDc : null, isOceanWrapMove);
                             let isOnHill = mapData[piece.r][piece.c] === 'hill';
                             
                             if (obsCount === 0) return true; 
                             if (obsCount === 1 && isOnHill) return true; 
                             return false; 
                         } else {
-                            return Math.max(absR, absC) <= 3 && pathClearCheck;
+                            return Math.max(absR, effectiveAbsC) <= 3 && pathClearCheck;
                         }
                     
                     case 'Tàu':
+                        if (!isLineMove) return false; 
+                        let distance = Math.max(absR, effectiveAbsC);
                         if (isAttack) {
-                            let isQueenLine = (absR === 0 || absC === 0 || absR === absC);
-                            return isQueenLine && Math.max(absR, absC) <= 3 && isPathClear(piece.r, piece.c, targetR, targetC);
+                            return distance <= 4 && pathClearCheck;
                         } else {
-                            return Math.max(absR, absC) <= 5 && (!isLineMove || pathClearCheck);
+                            if (effectiveAbsC === 0) {
+                                return distance <= 8 && pathClearCheck;
+                            } else {
+                                return distance <= 2 && pathClearCheck;
+                            }
                         }
                 }
+                
                 return false;
             }
 
@@ -1102,60 +1380,155 @@
                 });
             }
 
-            function handleCellClick(e, r, c) {
-                if (isGameOver || document.getElementById('promo-overlay')) return; 
-                if (currentTurn !== localPlayerRole) return; 
+            function killPieceAndPassengers(pieceId) {
+                let p = pieces.find(x => x.id === pieceId);
+                if (p && !p.isDead) {
+                    p.isDead = true;
+                    let passengers = pieces.filter(x => x.carriedBy === pieceId && !x.isDead);
+                    passengers.forEach(pass => killPieceAndPassengers(pass.id));
+                }
+            }
+            
+            function movePieceAndPassengers(pieceId, newR, newC) {
+                let p = pieces.find(x => x.id === pieceId);
+                if (p && !p.isDead) {
+                    p.r = newR;
+                    p.c = newC;
+                    let passengers = pieces.filter(x => x.carriedBy === pieceId && !x.isDead);
+                    passengers.forEach(pass => movePieceAndPassengers(pass.id, newR, newC));
+                }
+            }
 
-                let targetCell = cells[r][c];
-                let clickedPieceDiv = e.target.closest('.piece:not(.ruin)');
-                let clickedPiece = null;
+            function showPieceSelector(piecesInCell, r, c) {
+                let menu = document.getElementById('piece-selector-menu');
+                if (!menu) {
+                    menu = document.createElement('div');
+                    menu.id = 'piece-selector-menu';
+                    document.body.appendChild(menu);
+                }
+                menu.innerHTML = ''; 
                 
-                if (clickedPieceDiv) {
-                    clickedPiece = pieces.find(p => p.id === clickedPieceDiv.dataset.id && !p.isDead);
-                } else {
-                    clickedPiece = pieces.find(p => p.r === r && p.c === c && !p.isDead && p.carriedBy == null && p.type !== 'Tháp');
-                    if (!clickedPiece) {
-                        clickedPiece = pieces.find(p => p.r === r && p.c === c && !p.isDead && p.carriedBy == null && p.type === 'Tháp');
+                let header = document.createElement('div');
+                header.innerText = 'CHỌN QUÂN:';
+                header.style.cssText = 'color: #f1c40f; font-size: 12px; text-align: center; margin-bottom: 2px; border-bottom: 1px solid #7f8c8d; padding-bottom: 4px;';
+                menu.appendChild(header);
+
+                menu.style.display = 'flex';
+                
+                let cellEl = cells[r][c];
+                let rect = cellEl.getBoundingClientRect();
+                
+                let menuX = rect.right + 10;
+                let menuY = rect.top;
+                
+                menu.style.left = menuX + 'px';
+                menu.style.top = menuY + 'px';
+
+                piecesInCell.forEach(p => {
+                    let btn = document.createElement('button');
+                    btn.className = 'selector-btn';
+                    btn.innerHTML = `<span style="font-size: 24px;">${p.icon}</span> <span>${p.type}</span>`;
+                    
+                    btn.onclick = (e) => {
+                        menu.style.display = 'none';
+                        selectedPieceId = p.id;
+                        renderPieces();
+                        updateVision();
+                        showValidMoves(p);
+                    };
+                    menu.appendChild(btn);
+                });
+
+                setTimeout(() => {
+                    let mRect = menu.getBoundingClientRect();
+                    if (mRect.right > window.innerWidth) {
+                        menu.style.left = (rect.left - mRect.width - 10) + 'px'; 
                     }
-                    if (!clickedPiece) {
-                        clickedPiece = pieces.find(p => p.r === r && p.c === c && !p.isDead && p.carriedBy != null);
+                    if (mRect.bottom > window.innerHeight) {
+                        menu.style.top = (window.innerHeight - mRect.height - 10) + 'px'; 
+                    }
+                }, 0);
+            }
+
+            document.addEventListener('click', (e) => {
+                let menu = document.getElementById('piece-selector-menu');
+                if (menu && menu.style.display === 'flex' && !menu.contains(e.target) && !e.target.closest('.cell')) {
+                    menu.style.display = 'none';
+                }
+            });
+
+            function handleCellClick(e, r, c) {
+                if (isReplaying || isGameOver || document.getElementById('promo-overlay')) return; 
+                if (currentTurn !== localPlayerRole) return;
+
+                let menu = document.getElementById('piece-selector-menu');
+                if (menu && menu.style.display === 'flex') {
+                    menu.style.display = 'none'; 
+                }
+
+                let myPiecesAtCell = pieces.filter(p => p.r === r && p.c === c && p.player === localPlayerRole && !p.isDead);
+                let enemyPiecesAtCell = pieces.filter(p => p.r === r && p.c === c && p.player !== localPlayerRole && !p.isDead);
+                let currentSelected = pieces.find(p => p.id === selectedPieceId);
+
+                if (currentSelected && (r !== currentSelected.r || c !== currentSelected.c) && (myPiecesAtCell.length === 0 || myPiecesAtCell.some(p => ['Tàu', 'Xe', 'Mã', 'Tháp'].includes(p.type)))) {
+                    let isAttack = enemyPiecesAtCell.length > 0;
+                    let targetEnemy = enemyPiecesAtCell.find(p => p.carriedBy == null) || enemyPiecesAtCell[0]; 
+                    let targetFriendly = myPiecesAtCell.find(p => ['Tàu', 'Xe', 'Mã', 'Tháp'].includes(p.type) && p.id !== currentSelected.id);
+
+                    if (isAttack && isValidAction(currentSelected, r, c, true)) {
+                        executeMove(currentSelected, r, c, true, targetEnemy);
+                        return;
+                    } else if (!isAttack && targetFriendly && isValidAction(currentSelected, r, c, false)) {
+                        executeMove(currentSelected, r, c, false, targetFriendly);
+                        return;
+                    } else if (!isAttack && myPiecesAtCell.length === 0 && isValidAction(currentSelected, r, c, false)) {
+                         executeMove(currentSelected, r, c, false, null);
+                         return;
                     }
                 }
 
-                if (clickedPiece && clickedPiece.player === localPlayerRole) {
-                    if (lockedPieceId && clickedPiece.id !== lockedPieceId) {
+                if (myPiecesAtCell.length > 0) {
+                    if (lockedPieceId) {
+                        let lockedP = myPiecesAtCell.find(p => p.id === lockedPieceId);
+                        if (lockedP) {
+                             lockedP.extraMoveUsed = false;
+                             lockedP.canDisembark = false;
+                             lockedPieceId = null;
+                             selectedPieceId = null;
+                             currentTurn = currentTurn === 'p1' ? 'p2' : 'p1';
+                             updateTurnUI();
+                             saveCurrentState();
+                             syncGameToFirebase();
+                             clearHighlights();
+                             renderPieces();
+                             updateVision();
+                             if (gameMode === 'pve' && currentTurn !== localPlayerRole) setTimeout(() => playBotAI(), 800);
+                        }
                         return; 
                     }
 
-                    let currentSelected = pieces.find(p => p.id === selectedPieceId);
-                    const transports = ['Tàu', 'Xe', 'Mã', 'Tháp'];
-                    
-                    if (currentSelected && currentSelected.id !== clickedPiece.id) {
-                        let isBishopInTower = currentSelected.type === 'Tượng' && currentSelected.carriedBy && pieces.find(p => p.id === currentSelected.carriedBy).type === 'Tháp';
-                        let isTransport = transports.includes(clickedPiece.type);
-                        
-                        if (isBishopInTower || isTransport) {
-                            if(isValidAction(currentSelected, r, c, false)) {
-                                executeMove(currentSelected, r, c, false, clickedPiece);
-                                return;
-                            }
+                    if (myPiecesAtCell.length >= 3) {
+                        showPieceSelector(myPiecesAtCell, r, c);
+                    } else if (myPiecesAtCell.length === 2) {
+                        let clickedPieceEl = e.target.closest('.piece');
+                        if (clickedPieceEl && clickedPieceEl.dataset.id) {
+                            selectedPieceId = clickedPieceEl.dataset.id;
+                        } else {
+                            let carrier = myPiecesAtCell.find(p => !p.carriedBy);
+                            selectedPieceId = carrier ? carrier.id : myPiecesAtCell[0].id;
                         }
-                    }
-                    selectedPieceId = clickedPiece.id;
-                    renderPieces();
-                    updateVision(); 
-                    showValidMoves(clickedPiece); 
-                    return;
-                }
-
-                if (selectedPieceId) {
-                    let movingPiece = pieces.find(p => p.id === selectedPieceId);
-                    let isAttack = clickedPiece && clickedPiece.player !== localPlayerRole;
-
-                    if (isValidAction(movingPiece, r, c, isAttack)) {
-                        executeMove(movingPiece, r, c, isAttack, clickedPiece);
+                        renderPieces();
+                        updateVision(); 
+                        let selectedP = pieces.find(x => x.id === selectedPieceId);
+                        if (selectedP) showValidMoves(selectedP); 
                     } else {
-                        if (lockedPieceId) return; 
+                        selectedPieceId = myPiecesAtCell[0].id;
+                        renderPieces();
+                        updateVision(); 
+                        showValidMoves(myPiecesAtCell[0]); 
+                    }
+                } else {
+                    if (!lockedPieceId) {
                         selectedPieceId = null;
                         clearHighlights();
                         renderPieces();
@@ -1165,6 +1538,37 @@
             }
 
             function executeMove(movingPiece, r, c, isAttack, targetPiece) {
+                if (movingPiece.canDisembark) {
+                    clearHighlights();
+                    movingPiece.hasMoved = true;
+                    deadVisions.forEach(dv => { dv.turnsLeft--; });
+                    deadVisions = deadVisions.filter(dv => dv.turnsLeft > 0);
+                    
+                    movingPiece.carriedBy = null;
+                    movePieceAndPassengers(movingPiece.id, r, c);
+                    movingPiece.canDisembark = false;
+                    
+                    selectedPieceId = null;
+                    updateVision();
+                    
+                    let isPromoting = false;
+                    if (movingPiece.type === 'Tốt') {
+                        if (movingPiece.player === 'p1' && movingPiece.r === 0) isPromoting = true;
+                        else if (movingPiece.player === 'p2' && movingPiece.r === ROWS - 1) isPromoting = true;
+                    }
+                    if (isPromoting && !isGameOver) {
+                        if (movingPiece.player === localPlayerRole) {
+                            showPromotionUI(movingPiece);
+                            return; 
+                        } else if (gameMode === 'pve') {
+                            movingPiece.type = 'Hậu'; movingPiece.icon = '♛'; movingPiece.vision = 8;
+                            finalizeTurn(movingPiece); return;
+                        }
+                    }
+                    if (!isGameOver) finalizeTurn(movingPiece);
+                    return;
+                }
+
                 clearHighlights(); 
                 movingPiece.hasMoved = true;
                 const transports = ['Tàu', 'Xe', 'Mã', 'Tháp'];
@@ -1174,6 +1578,18 @@
 
                 let isBishopInTower = movingPiece.type === 'Tượng' && movingPiece.carriedBy && pieces.find(p => p.id === movingPiece.carriedBy).type === 'Tháp';
                 let isSwap = isBishopInTower && !isAttack && targetPiece && targetPiece.player === movingPiece.player && targetPiece.type !== 'Tháp' && targetPiece.id !== movingPiece.carriedBy;
+
+                let triggerExplosion = false;
+                let explosionR, explosionC;
+
+                let isShoreAttack = false;
+                if (isAttack && targetPiece && targetPiece.type === 'Tàu' && ['ocean', 'river'].includes(mapData[targetPiece.r][targetPiece.c])) {
+                    if (!['Tàu', 'ĐạiBàng', 'BắnĐá'].includes(movingPiece.type)) {
+                        if (Math.max(Math.abs(movingPiece.r - targetPiece.r), Math.abs(movingPiece.c - targetPiece.c)) === 1) {
+                            isShoreAttack = true;
+                        }
+                    }
+                }
 
                 if (isSwap) {
                     let towerId = movingPiece.carriedBy;
@@ -1190,67 +1606,72 @@
                     movingPiece.carriedBy = targetCarriedBy;
                     
                     let passenger = pieces.find(p => p.carriedBy === targetPiece.id && !p.isDead);
-                    if (passenger) {
-                        passenger.r = targetPiece.r;
-                        passenger.c = targetPiece.c;
-                    }
+                    if (passenger) movePieceAndPassengers(passenger.id, targetPiece.r, targetPiece.c);
+                    
+                    let myPassenger = pieces.find(p => p.carriedBy === movingPiece.id && !p.isDead);
+                    if (myPassenger) movePieceAndPassengers(myPassenger.id, movingPiece.r, movingPiece.c);
                 }
                 else if (!isAttack && targetPiece && transports.includes(targetPiece.type) && targetPiece.player === movingPiece.player) {
                     movingPiece.carriedBy = targetPiece.id;
-                    movingPiece.r = targetPiece.r;
-                    movingPiece.c = targetPiece.c;
+                    movePieceAndPassengers(movingPiece.id, targetPiece.r, targetPiece.c);
                 } else {
                     if (isAttack) {
-                        targetPiece.isDead = true;
-                        showExplosion(r, c);
-                        
+                        let isExplosiveTower = false;
+                        let passengerToDrop = null;
+
                         if (targetPiece.type === 'Tháp') {
-                            destroyedTowers.push({ id: targetPiece.id, player: targetPiece.player, r: targetPiece.r, c: targetPiece.c });
+                            let passenger = pieces.find(p => p.carriedBy === targetPiece.id && !p.isDead);
+                            if (passenger) {
+                                if (passenger.type === 'ĐạiBàng') {
+                                    passengerToDrop = passenger; 
+                                } else if (passenger.type === 'Tượng' || passenger.type === 'BắnĐá') {
+                                    triggerExplosion = true; 
+                                    explosionR = targetPiece.r;
+                                    explosionC = targetPiece.c;
+                                    isExplosiveTower = true;
+                                }
+                            }
+                            if (!isExplosiveTower) destroyedTowers.push({ id: targetPiece.id, player: targetPiece.player, r: targetPiece.r, c: targetPiece.c });
                         }
+
+                        killPieceAndPassengers(targetPiece.id);
+
+                        if (passengerToDrop && passengerToDrop.type === 'ĐạiBàng') {
+                             passengerToDrop.isDead = false; 
+                             passengerToDrop.carriedBy = null;
+                             let dropC = targetPiece.c < 14 ? targetPiece.c - 1 : targetPiece.c + 1;
+                             passengerToDrop.r = targetPiece.r; passengerToDrop.c = dropC;
+                             let occupant = pieces.find(p => p.r === passengerToDrop.r && p.c === passengerToDrop.c && !p.isDead && !p.carriedBy && p.id !== passengerToDrop.id);
+                             if (occupant) killPieceAndPassengers(occupant.id);
+                        }
+
+                        showExplosion(r, c);
 
                         let radius = 0;
                         if (['ĐạiBàng', 'Hậu', 'Mã'].includes(targetPiece.type)) radius = 3; 
                         else if (['Xe', 'Tàu', 'Tượng'].includes(targetPiece.type)) radius = 2; 
-                        
                         if (mapData[r][c] === 'forest' && radius > 0) radius = radius === 3 ? 2 : 1;
                         if (radius > 0) deadVisions.push({ r: r, c: c, radius: radius, player: targetPiece.player, turnsLeft: 6 }); 
-                        
-                        if (transports.includes(targetPiece.type)) {
-                            let passenger = pieces.find(p => p.carriedBy === targetPiece.id && !p.isDead);
-                            if (passenger) passenger.isDead = true;
-                        }
-                        
-                        if (targetPiece.type === 'Vua') {
-                            isGameOver = true;
-                            updateVision();
-                            syncGameToFirebase();
-                            setTimeout(() => alert(targetPiece.player !== localPlayerRole ? '🎉 CHIẾN THẮNG! Bạn đã tiêu diệt Vua địch!' : '💀 BẠN ĐÃ THUA! Vua của bạn đã bị tiêu diệt.'), 300);
-                            return;
-                        }
 
-                        if (['BắnĐá', 'Tàu'].includes(movingPiece.type)) {
-                            if (movingPiece.carriedBy) movingPiece.carriedBy = null; 
-                        } else {
-                            if (movingPiece.carriedBy) movingPiece.carriedBy = null; 
-                            movingPiece.r = r; movingPiece.c = c;
-                            
-                            if (transports.includes(movingPiece.type)) {
-                                let passenger = pieces.find(p => p.carriedBy === movingPiece.id && !p.isDead);
-                                if (passenger) {
-                                    passenger.r = r; passenger.c = c;
+                        if (triggerExplosion) {
+                            for (let er = explosionR - 1; er <= explosionR + 1; er++) {
+                                for (let ec = explosionC - 1; ec <= explosionC + 1; ec++) {
+                                    let victims = pieces.filter(p => p.r === er && p.c === ec && !p.isDead);
+                                    victims.forEach(v => killPieceAndPassengers(v.id)); 
+                                    if(er>=0 && er<ROWS && ec>=0 && ec<COLS) showExplosion(er, ec);
                                 }
                             }
                         }
+
+                        if (['BắnĐá', 'Tàu'].includes(movingPiece.type) || isShoreAttack) {
+                             // Đứng yên
+                        } else {
+                            if (movingPiece.carriedBy) movingPiece.carriedBy = null; 
+                            movePieceAndPassengers(movingPiece.id, r, c);
+                        }
                     } else {
                         if (movingPiece.carriedBy) movingPiece.carriedBy = null; 
-                        movingPiece.r = r; movingPiece.c = c;
-                        
-                        if (transports.includes(movingPiece.type)) {
-                            let passenger = pieces.find(p => p.carriedBy === movingPiece.id && !p.isDead);
-                            if (passenger) {
-                                passenger.r = r; passenger.c = c;
-                            }
-                        }
+                        movePieceAndPassengers(movingPiece.id, r, c);
                     }
                 }
 
@@ -1270,6 +1691,19 @@
 
                 selectedPieceId = null;
                 updateVision();
+
+                let p1King = pieces.find(p => p.type === 'Vua' && p.player === 'p1');
+                let p2King = pieces.find(p => p.type === 'Vua' && p.player === 'p2');
+                if (p1King.isDead || p2King.isDead) {
+                    isGameOver = true;
+                    saveCurrentState();
+                    updateVision();
+                    syncGameToFirebase();
+                    document.getElementById('btn-replay').style.display = 'block';
+                    let won = (p2King.isDead && localPlayerRole === 'p1') || (p1King.isDead && localPlayerRole === 'p2');
+                    setTimeout(() => alert(won ? '🎉 CHIẾN THẮNG! Bạn đã tiêu diệt Vua địch!' : '💀 BẠN ĐÃ THUA! Vua của bạn đã bị tiêu diệt.'), 300);
+                    return;
+                }
 
                 let isPromoting = false;
                 if (movingPiece.type === 'Tốt') {
@@ -1306,19 +1740,45 @@
                         movingPiece.extraMoveUsed = true;
                         hasExtraMove = true;
                     }
+                } else if (movingPiece.type === 'Tàu' && !movingPiece.extraMoveUsed) {
+                    let passenger = pieces.find(p => p.carriedBy === movingPiece.id && !p.isDead);
+                    if (passenger) {
+                        let canDrop = false;
+                        for(let dr = -1; dr <= 1; dr++) {
+                            for(let dc = -1; dc <= 1; dc++) {
+                                let nr = movingPiece.r + dr, nc = movingPiece.c + dc;
+                                if(nr>=0 && nr<ROWS && nc>=0 && nc<COLS) {
+                                    let t = mapData[nr][nc];
+                                    if(t !== 'ocean' && t !== 'river' && !hasPieceAt(nr, nc)) canDrop = true;
+                                }
+                            }
+                        }
+                        if (canDrop) {
+                            passenger.canDisembark = true;
+                            passenger.extraMoveUsed = true;
+                            hasExtraMove = true;
+                            movingPiece = passenger;
+                        }
+                    }
                 } else {
                     movingPiece.extraMoveUsed = false;
+                    movingPiece.canDisembark = false;
                 }
 
                 if (hasExtraMove) {
                     lockedPieceId = movingPiece.id;
                     if (currentTurn === localPlayerRole) {
-                        turnInd.innerText = 'MÃ ĐƯỢC ĐI THÊM 1 BƯỚC!';
+                        if (movingPiece.canDisembark) {
+                            turnInd.innerText = 'CHỌN Ô ĐỂ XUỐNG TÀU (BẤM VÀO QUÂN ĐỂ HỦY)';
+                        } else {
+                            turnInd.innerText = 'MÃ ĐƯỢC ĐI THÊM 1 BƯỚC (BẤM VÀO MÃ ĐỂ HỦY)';
+                        }
                         turnInd.style.backgroundColor = '#f39c12';
                         selectedPieceId = movingPiece.id; 
                         updateVision();
                         showValidMoves(movingPiece);
                     }
+                    saveCurrentState();
                     syncGameToFirebase(); 
                     
                     if (gameMode === 'pve' && currentTurn !== localPlayerRole) {
@@ -1329,6 +1789,7 @@
                     pieces.filter(p => p.player === currentTurn).forEach(p => p.extraMoveUsed = false);
                     currentTurn = currentTurn === 'p1' ? 'p2' : 'p1';
                     
+                    saveCurrentState();
                     updateTurnUI();
                     syncGameToFirebase(); 
 
@@ -1338,7 +1799,7 @@
                 }
             }
 
-        function playBotAI(forcedPieceId = null) {
+            function playBotAI(forcedPieceId = null) {
                 if (isGameOver || gameMode !== 'pve') return;
                 
                 let bots = pieces.filter(p => p.player === currentTurn && !p.isDead && !p.carriedBy && p.type !== 'Tháp');
@@ -1351,7 +1812,7 @@
                 let moves = [];
 
                 bots.forEach(piece => {
-                    let limit = (piece.type === 'BắnĐá' || piece.type === 'Xe') ? 10 : 7;
+                    let limit = (piece.type === 'BắnĐá' || piece.type === 'Xe') ? 10 : (piece.type === 'Tàu' ? 8 : 7);
                     
                     let inForest = mapData[piece.r][piece.c] === 'forest';
                     let canWrap = ['Tốt', 'Mã'].includes(piece.type) && inForest;
@@ -1420,7 +1881,7 @@
                 } else {
                     if (forcedPieceId) {
                         let mp = pieces.find(p => p.id === forcedPieceId);
-                        if(mp) mp.extraMoveUsed = false;
+                        if(mp) { mp.extraMoveUsed = false; mp.canDisembark = false; }
                         lockedPieceId = null;
                         currentTurn = localPlayerRole;
                         updateTurnUI();
@@ -1436,6 +1897,7 @@
 
             function updateVision() {
                 document.querySelectorAll('.death-glow').forEach(el => el.style.display = 'none');
+                document.querySelectorAll('.check-glow').forEach(el => el.remove());
 
                 for (let r = 0; r < ROWS; r++) {
                     for (let c = 0; c < COLS; c++) {
@@ -1447,17 +1909,50 @@
                 }
 
                 let myVisionObj = calculateVisionMatrix(localPlayerRole);
-                window.localVisionGrid = myVisionObj.grid;
-                window.localStealthGrid = myVisionObj.stealthGrid;
+                let grid = myVisionObj.grid;
+                let stealthGrid = myVisionObj.stealthGrid;
+
+                let myKing = pieces.find(p => p.type === 'Vua' && p.player === localPlayerRole && !p.isDead);
+                let allEnemies = pieces.filter(p => p.player !== localPlayerRole && !p.isDead);
+
+                if (myKing) {
+                    allEnemies.forEach(enemy => {
+                        if (isValidAction(enemy, myKing.r, myKing.c, true, grid)) {
+                            grid[enemy.r][enemy.c] = true;
+                            stealthGrid[enemy.r][enemy.c] = true;
+                            let cg = document.createElement('div');
+                            cg.className = 'check-glow';
+                            cells[enemy.r][enemy.c].appendChild(cg);
+
+                            for (let r = 0; r < ROWS; r++) {
+                                for (let c = 0; c < COLS; c++) {
+                                    if (r === enemy.r && c === enemy.c) continue;
+                                    let target = pieces.find(p => p.r === r && p.c === c && !p.isDead && p.carriedBy == null);
+                                    let isAttack = target && target.player !== enemy.player;
+                                    if (isValidAction(enemy, r, c, isAttack, null)) {
+                                        grid[r][c] = true;
+                                        stealthGrid[r][c] = true;
+                                        let cg2 = document.createElement('div');
+                                        cg2.className = 'check-glow';
+                                        cells[r][c].appendChild(cg2);
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
 
                 for (let r = 0; r < ROWS; r++) {
                     for (let c = 0; c < COLS; c++) {
-                        if (myVisionObj.grid[r][c]) {
+                        if (grid[r][c]) {
                             cells[r][c].classList.add('visible');
                             cells[r][c].classList.remove('shrouded');
                         }
                     }
                 }
+
+                window.localVisionGrid = grid;
+                window.localStealthGrid = stealthGrid;
 
                 deadVisions.forEach(dv => {
                     if (dv.player === localPlayerRole) {
@@ -1476,6 +1971,15 @@
 
                 renderPieces();
             }
+
+            
+            window.addEventListener('beforeunload', function (e) {
+                let isPlaying = document.getElementById('viewport').style.display === 'block';
+                if (isPlaying && !isGameOver) {
+                    e.preventDefault();
+                    e.returnValue = ''; 
+                }
+            });
         </script>
     </body>
     </html>
