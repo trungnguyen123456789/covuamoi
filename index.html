@@ -3,11 +3,15 @@
     <head>
         <meta charset="UTF-8">
         <title>Cờ Sầu Riêng</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
         <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
         <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
         <style>
+            :root {
+                --board-scale: 1; /* Biến CSS dùng để scale bàn cờ dynamically */
+            }
+
             body {
                 background-color: #1a252f; color: white; font-family: 'Segoe UI', sans-serif;
                 display: flex; flex-direction: column; align-items: center;
@@ -59,10 +63,20 @@
             .btn-rep { background: #2ecc71; color: white; border: none; padding: 6px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
             .btn-rep:active { background: #27ae60; }
 
+            /* Nền đằng sau bản đồ */
             #viewport {
-                flex-grow: 1; width: 100vw; height: auto; overflow: auto;
-                background-color: #0d1117;
+                flex-grow: 1; width: 100vw; height: 100%; overflow: auto;
+                background: radial-gradient(circle at center, #2c3e50, #000); 
                 -webkit-overflow-scrolling: touch; display: none;
+                align-items: center; justify-content: center; /* Giữ bản đồ căn giữa */
+            }
+
+            /* Container mới để đồng bộ thanh cuộn với tỷ lệ scale */
+            #scale-wrapper {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: width 0.3s, height 0.3s;
             }
 
             /* BỌC BÀN CỜ SÁT RẠT */
@@ -72,10 +86,12 @@
                 border: 4px solid #34495e;
                 padding: 30px; /* Khu vực vẽ Tọa độ */
                 border-radius: 12px;
-                margin: 20px auto; 
+                margin: auto; 
                 width: fit-content;
                 box-sizing: border-box;
                 will-change: transform;
+                transform-origin: center center;
+                transform: scale(var(--board-scale)); /* Scale thu phóng theo thiết bị */
                 transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
                 box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.7);
             }
@@ -89,7 +105,7 @@
                 box-shadow: 0 0 15px rgba(0,0,0,0.5);
             }
 
-            #board-wrapper.rotate-180 { transform: rotate(180deg); }
+            #board-wrapper.rotate-180 { transform: scale(var(--board-scale)) rotate(180deg); }
             #board-wrapper.rotate-180 .piece {
                 transform: rotate(180deg);
                 box-shadow: inset 0 4px 0 rgba(0,0,0,0.3), inset 0 -2px 0 rgba(255,255,255,0.3), 0 -4px 6px rgba(0,0,0,0.4);
@@ -268,8 +284,10 @@
         </div>
         
         <div id="viewport">
-            <div id="board-wrapper">
-                <div id="board"></div>
+            <div id="scale-wrapper">
+                <div id="board-wrapper">
+                    <div id="board"></div>
+                </div>
             </div>
         </div>
 
@@ -331,6 +349,28 @@
 
             const PIECE_VALUES = { 'Vua': 1000, 'Hậu': 90, 'Xe': 50, 'Mã': 30, 'Tượng': 30, 'Tàu': 40, 'ĐạiBàng': 40, 'BắnĐá': 40, 'Tháp': 0, 'Tốt': 10 };
 
+            // Hàm tự động thu phóng bản đồ cho vừa thiết bị
+            function fitBoardToScreen() {
+                let vp = document.getElementById('viewport');
+                let wrapperBox = document.getElementById('scale-wrapper');
+                if (vp && vp.style.display !== 'none' && wrapperBox) {
+                    let availableW = vp.clientWidth;
+                    let availableH = vp.clientHeight;
+                    // Bảng gốc 28*40=1120 + 60px padding + 8px border
+                    let boardW = 1188; 
+                    // Cao gốc 30*40=1200 + 60px padding + 8px border
+                    let boardH = 1268; 
+                    
+                    let scale = Math.min(availableW / boardW, availableH / boardH) * 0.98; // Giữ lề nhẹ
+                    if (scale > 1) scale = 1; // Không zoom quá to trên PC
+                    
+                    document.documentElement.style.setProperty('--board-scale', scale);
+                    wrapperBox.style.width = (boardW * scale) + 'px';
+                    wrapperBox.style.height = (boardH * scale) + 'px';
+                }
+            }
+            window.addEventListener('resize', fitBoardToScreen);
+
             function saveCurrentState() {
                 if (isReplaying) return;
                 gameHistory.push({
@@ -388,11 +428,10 @@
             }
 
           function startPvE() {
-                // Kiểm tra tên
                 let inputName = document.getElementById('player-name').value.trim();
                 if (inputName === '') {
                     alert("Vui lòng nhập tên của bạn trước khi chơi!");
-                    return; // Chặn không cho chạy tiếp
+                    return; 
                 }
                 playerName = inputName;
                 
@@ -411,7 +450,6 @@
             }
 
             function createRoom() {
-                // Kiểm tra tên
                 let inputName = document.getElementById('player-name').value.trim();
                 if (inputName === '') {
                     alert("Vui lòng nhập tên của bạn trước khi tạo phòng!");
@@ -437,7 +475,6 @@
             }
 
             function joinRoom() {
-                // Kiểm tra tên
                 let inputName = document.getElementById('player-name').value.trim();
                 if (inputName === '') {
                     alert("Vui lòng nhập tên của bạn trước khi vào phòng!");
@@ -493,9 +530,11 @@
 
             function hideLobbyAndStart() {
                 lobbyContainer.style.display = 'none';
-                viewport.style.display = 'block';
+                viewport.style.display = 'flex'; // Thay đổi thành flex để đồng bộ canh giữa
                 turnInd.style.display = 'block';
                 btnLeave.style.display = 'block';
+                
+                fitBoardToScreen(); // Gọi hàm fit viewport
                 
                 if (timeLimit > 0) {
                     timerContainer.style.display = 'flex';
@@ -744,18 +783,16 @@
                         if ((r === 14 || r === 15) && c >= 12 && c <= 15) mapData[r][c] = 'mountain';
                     }
                 }
-                // Thiết lập đúng tọa độ các Cảng theo yêu cầu
-                mapData[0][2] = 'port';   // C30
-                mapData[0][25] = 'port';  // Z30
-                mapData[29][2] = 'port';  // C1 (C0)
-                mapData[29][25] = 'port'; // Z1 (Z0)
+                mapData[0][2] = 'port';   
+                mapData[0][25] = 'port';  
+                mapData[29][2] = 'port';  
+                mapData[29][25] = 'port'; 
             }
 
             function buildBoard() {
                 boardEl.innerHTML = '';
                 document.querySelectorAll('.coord').forEach(el => el.remove());
                 
-                // THÊM TỌA ĐỘ CHỮ & SỐ NẰM GỌN TRONG VIỀN BẢN ĐỒ
                 const letters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB'];
                 for(let c = 0; c < COLS; c++) {
                     let topL = document.createElement('div');
@@ -1161,7 +1198,6 @@
 
                 let isWater = (terrain === 'ocean' || terrain === 'river');
                 let isShoreAttack = false;
-                // FIX LỖI CRASH Ở ĐÂY: Dùng actualTargetEnemy thay vì targetPiece bị undefine
                 if (isAttack && actualTargetEnemy && actualTargetEnemy.type === 'Tàu' && ['ocean', 'river'].includes(mapData[actualTargetEnemy.r][actualTargetEnemy.c])) {
                     if (!['Tàu', 'ĐạiBàng', 'BắnĐá'].includes(piece.type)) {
                         if (Math.max(absR, effectiveAbsC) === 1) {
@@ -1186,7 +1222,6 @@
                 }
                 if (piece.type === 'Tháp') return false; 
                 
-                // Chặn Quân Bờ xuống nước
                 if (!isBoardingFromDistance) {
                     if (piece.type === 'Tàu' && !isWater && terrain !== 'port' && !isAttack) return false;
                     if (piece.type !== 'Tàu' && piece.type !== 'ĐạiBàng' && isWater) {
@@ -1974,7 +2009,7 @@
 
             
             window.addEventListener('beforeunload', function (e) {
-                let isPlaying = document.getElementById('viewport').style.display === 'block';
+                let isPlaying = document.getElementById('viewport').style.display === 'flex'; // Cập nhật điều kiện này theo CSS
                 if (isPlaying && !isGameOver) {
                     e.preventDefault();
                     e.returnValue = ''; 
