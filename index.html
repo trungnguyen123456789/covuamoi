@@ -1474,12 +1474,13 @@
 
                 let isBishopInTower = currentSelected && currentSelected.type === 'Tượng' && currentSelected.carriedBy && pieces.find(p => p.id === currentSelected.carriedBy).type === 'Tháp';
 
-                if (currentSelected && (r !== currentSelected.r || c !== currentSelected.c) && (myPiecesAtCell.length === 0 || myPiecesAtCell.some(p => ['Tàu', 'Xe', 'Mã', 'Tháp'].includes(p.type)) || isBishopInTower)) {
+                // Tinh chỉnh điều kiện if để mở khóa click cho mọi mục tiêu
+                if (currentSelected && (r !== currentSelected.r || c !== currentSelected.c) && (myPiecesAtCell.length === 0 || myPiecesAtCell.some(p => !p.carriedBy))) {
                     let isAttack = enemyPiecesAtCell.length > 0;
                     let targetEnemy = enemyPiecesAtCell.find(p => p.carriedBy == null) || enemyPiecesAtCell[0]; 
                     
-                    // Cho phép targetFriendly là bất cứ quân đồng minh nào nếu Tượng đang trong Tháp
-                    let targetFriendly = myPiecesAtCell.find(p => (['Tàu', 'Xe', 'Mã', 'Tháp'].includes(p.type) || isBishopInTower) && p.id !== currentSelected.id);
+                    // FIX LỖI Ở ĐÂY: Luôn bắt lấy "Carrier" (quân gốc không bị ai cõng) làm mục tiêu tương tác, bỏ qua quân hành khách bị cõng.
+                    let targetFriendly = myPiecesAtCell.find(p => !p.carriedBy && p.id !== currentSelected.id);
 
                     if (isAttack && isValidAction(currentSelected, r, c, true)) {
                         executeMove(currentSelected, r, c, true, targetEnemy);
@@ -1494,6 +1495,7 @@
                 }
 
                 if (myPiecesAtCell.length > 0) {
+//... (Giữ nguyên toàn bộ phần code bên dưới từ đoạn kiểm tra lockedPieceId trở đi) ...
                     if (lockedPieceId) {
                         let lockedP = myPiecesAtCell.find(p => p.id === lockedPieceId);
                         if (lockedP) {
