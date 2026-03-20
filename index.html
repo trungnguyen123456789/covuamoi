@@ -867,8 +867,10 @@
                 });
             }
 
-            function showValidMoves(piece) {
+          function showValidMoves(piece) {
                 clearHighlights();
+                let isBishopInTower = piece.type === 'Tượng' && piece.carriedBy && pieces.find(p => p.id === piece.carriedBy).type === 'Tháp';
+
                 for (let r = 0; r < ROWS; r++) {
                     for (let c = 0; c < COLS; c++) {
                         if (r === piece.r && c === piece.c) continue;
@@ -879,7 +881,7 @@
                         if (isValidAction(piece, r, c, isAttack, null)) {
                             if (isAttack) {
                                 cells[r][c].classList.add('valid-attack');
-                            } else if (!targetPiece || (['Tàu', 'Xe', 'Mã', 'Tháp'].includes(targetPiece.type) && targetPiece.player === piece.player)) {
+                            } else if (!targetPiece || (['Tàu', 'Xe', 'Mã', 'Tháp'].includes(targetPiece.type) && targetPiece.player === piece.player) || (isBishopInTower && targetPiece.player === piece.player && targetPiece.type !== 'Tháp')) {
                                 cells[r][c].classList.add('valid-move');
                             }
                         }
@@ -1470,10 +1472,14 @@
                 let enemyPiecesAtCell = pieces.filter(p => p.r === r && p.c === c && p.player !== localPlayerRole && !p.isDead);
                 let currentSelected = pieces.find(p => p.id === selectedPieceId);
 
-                if (currentSelected && (r !== currentSelected.r || c !== currentSelected.c) && (myPiecesAtCell.length === 0 || myPiecesAtCell.some(p => ['Tàu', 'Xe', 'Mã', 'Tháp'].includes(p.type)))) {
+                let isBishopInTower = currentSelected && currentSelected.type === 'Tượng' && currentSelected.carriedBy && pieces.find(p => p.id === currentSelected.carriedBy).type === 'Tháp';
+
+                if (currentSelected && (r !== currentSelected.r || c !== currentSelected.c) && (myPiecesAtCell.length === 0 || myPiecesAtCell.some(p => ['Tàu', 'Xe', 'Mã', 'Tháp'].includes(p.type)) || isBishopInTower)) {
                     let isAttack = enemyPiecesAtCell.length > 0;
                     let targetEnemy = enemyPiecesAtCell.find(p => p.carriedBy == null) || enemyPiecesAtCell[0]; 
-                    let targetFriendly = myPiecesAtCell.find(p => ['Tàu', 'Xe', 'Mã', 'Tháp'].includes(p.type) && p.id !== currentSelected.id);
+                    
+                    // Cho phép targetFriendly là bất cứ quân đồng minh nào nếu Tượng đang trong Tháp
+                    let targetFriendly = myPiecesAtCell.find(p => (['Tàu', 'Xe', 'Mã', 'Tháp'].includes(p.type) || isBishopInTower) && p.id !== currentSelected.id);
 
                     if (isAttack && isValidAction(currentSelected, r, c, true)) {
                         executeMove(currentSelected, r, c, true, targetEnemy);
@@ -1536,7 +1542,6 @@
                     }
                 }
             }
-
             function executeMove(movingPiece, r, c, isAttack, targetPiece) {
                 if (movingPiece.canDisembark) {
                     clearHighlights();
