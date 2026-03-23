@@ -2883,6 +2883,31 @@
 
             function playBotAI(forcedPieceId = null) {
                 if (isGameOver || gameMode !== 'pve') return;
+                // --- BẮT ĐẦU: BOT TỰ ĐỘNG NGHIÊN CỨU ---
+    let didResearch = false;
+    let botMages = pieces.filter(p => p.player === currentTurn && p.type === 'PhápSư' && p.carriedBy && !p.isDead);
+    
+    for (let mage of botMages) {
+        let carrier = pieces.find(p => p.id === mage.carriedBy);
+        if (carrier && carrier.type === 'HọcViện' && !mage.hasMoved) {
+            // Tìm công nghệ chưa mở khóa
+            let availableTechs = Object.keys(TECH_TREE).filter(k => 
+                !unlockedTechs[currentTurn].includes(k) && 
+                (!TECH_TREE[k].req || unlockedTechs[currentTurn].includes(TECH_TREE[k].req))
+            );
+            
+            if (availableTechs.length > 0) {
+                // Ưu tiên nâng cấp linh tinh, hoặc lấy cái đầu tiên
+                let techToResearch = availableTechs[Math.floor(Math.random() * availableTechs.length)];
+                selectedPieceId = mage.id;
+                doResearch(techToResearch);
+                didResearch = true;
+                break; // Tốn 1 lượt để nghiên cứu, dừng AI tại đây
+            }
+        }
+    }
+    if (didResearch) return; // Kết thúc lượt vì đã bấm nút nghiên cứu
+    // --- KẾT THÚC: BOT TỰ ĐỘNG NGHIÊN CỨU ---
                 
                 let bots = pieces.filter(p => p.player === currentTurn && !p.isDead && !p.carriedBy && p.type !== 'Tháp');
                 bots = bots.concat(pieces.filter(p => p.player === currentTurn && !p.isDead && p.carriedBy && p.type === 'PhápSư'));
@@ -2894,7 +2919,28 @@
                 let botVision = botVisionObj.grid;
                 let botStealth = botVisionObj.stealthGrid;
                 let moves = [];
+                // --- BẮT ĐẦU CHÈN THREAT MAP ---
+// --- BẮT ĐẦU CHÈN THREAT MAP ---
+let threatMap = Array(ROWS).fill().map(() => Array(COLS).fill(false));
 
+// Lấy TẤT CẢ các thế lực thù địch (Người chơi + Thú hoang)
+let enemyPieces = pieces.filter(p => p.player !== currentTurn && !p.isDead && !p.carriedBy);
+
+let defenseMap = Array(ROWS).fill().map(() => Array(COLS).fill(false));
+    bots.forEach(bp => {
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (Math.max(Math.abs(bp.r - r), Math.abs(bp.c - c)) > 10) continue;
+                // Giả lập bot đánh vào ô đó để xem có bảo kê được đồng đội không
+                if (isValidAction(bp, r, c, true, null)) { 
+                    defenseMap[r][c] = true;
+                }
+            }
+        }
+    });
+
+    let enemyKing = pieces.find(p => p.player === localPlayerRole && p.type === 'Vua' && !p.isDead);
+    // --- KẾT THÚC: BẢN ĐỒ BẢO VỆ & SĂN VUA ---
                 bots.forEach(piece => {
                     let effType = piece.type;
                     if (isFantasticMode && piece.infected && currentWeather === 'TrăngMáu' && unlockedTechs[piece.player]?.includes('werewolf')) effType = 'NgườiSói';
@@ -2935,22 +2981,77 @@
                                 continue;
                             }
 
-                            if (isValidAction(piece, r, c, isA, botVision)) {
-                                let score = isA ? (PIECE_VALUES[target.type] * 3) : (currentTurn==='p2'? r * 3 : (ROWS-r)*3);
-                                
-                                if (getEffectiveTerrain(r, c) === 'hill' && (effType === 'BắnĐá' || effType === 'ĐạiBàng')) score += 60;
-                                if (getEffectiveTerrain(r, c) === 'forest' && (effType === 'Tốt' || effType === 'Mã')) score += 40;
+                           // --- THAY THẾ KHỐI LỆNH TÍNH ĐIỂM CŨ BẰNG ĐOẠN NÀY ---
+// --- THAY THẾ KHỐI LỆNH TÍNH ĐIỂM CŨ BẰNG ĐOẠN NÀY ---
+// --- BẮT ĐẦU KHỐI LỆNH ĐÁNH GIÁ THÔNG MINH ---
+if (isValidAction(piece, r, c, isA, botVision)) {
+    let score = 0;
+    let pieceValue = PIECE_VALUES[piece.type] || 10;
+    if (piece.type === 'Vua') pieceValue = 5000;
 
-                                if (effType === 'Hậu' && !isA) {
-                                    let isRuin = destroyedTowers.some(dt => dt.r === r && dt.c === c && dt.player === piece.player);
-                                    if (isRuin) score += 300; 
-                                }
+    let currentlyInDanger = threatMap[piece.r][piece.c];
+    let willBeInDanger = threatMap[r][c];
+    let isDefended = defenseMap[r][c]; // Ô này có quân mình bảo kê không?
+    
+    // 1. SINH TỒN & TRAO ĐỔI LỖ LÃI
+    if (currentlyInDanger && !willBeInDanger) {
+        score += pieceValue * 15; // Né đòn thành công
+    } else if (!currentlyInDanger && willBeInDanger) {
+        if (isDefended) {
+            score -= pieceValue * 1.5; // Bị đe dọa nhưng có đồng đội kê, chỉ trừ nhẹ
+        } else {
+            score -= pieceValue * 20; // Chết chay, phạt cực nặng
+        }
+    }
 
-                                let isDanger = playerPs.some(pp => Math.max(Math.abs(pp.r - r), Math.abs(pp.c - c)) <= 10 && isValidAction(pp, r, c, true));
-                                if (isDanger) score -= (PIECE_VALUES[piece.type] * 2);
+    // 2. TẤN CÔNG & SĂN VUA
+    if (isA && target) {
+        let targetValue = PIECE_VALUES[target.type] || 10;
+        if (target.type === 'Vua') {
+            score += 100000; // Đâm chớp nhoáng
+        } else {
+            // Trao đổi quân: Ăn xong mà bị ăn lại thì có lãi không?
+            if (willBeInDanger && !isDefended) {
+                score += (targetValue - pieceValue) * 10; 
+            } else {
+                score += targetValue * 15; // Ăn chùa
+            }
+        }
+    } else {
+        // Khuyến khích di chuyển lên trên một chút
+        let advanceBonus = (currentTurn === 'p2' ? r : (ROWS - r));
+        score += advanceBonus * 0.5; 
+        
+        // Kỷ luật dàn quân
+        if (!piece.hasMoved) score += 35; 
+        let isMovingBackward = (currentTurn === 'p1' && r > piece.r) || (currentTurn === 'p2' && r < piece.r);
+        if (isMovingBackward && !currentlyInDanger) score -= 40; 
+        if (effType === 'Tàu' && !pieces.some(p => p.carriedBy === piece.id)) score -= 25; 
 
-                                moves.push({ piece, r, c, targetPiece: target, score, isAttack: isA });
-                            }
+        // CHIẾN THUẬT SĂN VUA ĐỊCH (Chỉ dành cho quân giá trị cao)
+        if (enemyKing && pieceValue >= 30) {
+            let oldDistToKing = Math.abs(piece.r - enemyKing.r) + Math.abs(piece.c - enemyKing.c);
+            let newDistToKing = Math.abs(r - enemyKing.r) + Math.abs(c - enemyKing.c);
+            if (newDistToKing < oldDistToKing) {
+                score += 25; // Thưởng điểm nỗ lực dồn ép Vua địch
+            }
+        }
+    }
+
+    // 3. ĐỊA HÌNH 
+    if (getEffectiveTerrain(r, c) === 'hill' && (effType === 'BắnĐá' || effType === 'ĐạiBàng')) score += 50;
+    if (getEffectiveTerrain(r, c) === 'forest' && (effType === 'Tốt' || effType === 'Mã')) score += 30;
+    
+    if (effType === 'Hậu' && !isA) {
+        let isRuin = destroyedTowers.some(dt => dt.r === r && dt.c === c && dt.player === piece.player);
+        if (isRuin) score += 300; 
+    }
+
+    score += Math.floor(Math.random() * 8); // Ngẫu nhiên hóa lối đánh
+    moves.push({ piece, r, c, targetPiece: target, score, isAttack: isA });
+}
+// --- KẾT THÚC KHỐI LỆNH ĐÁNH GIÁ THÔNG MINH ---
+// --- KẾT THÚC KHỐI LỆNH MỚI ---
                         }
                     }
                 });
