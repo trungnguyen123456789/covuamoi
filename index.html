@@ -379,12 +379,13 @@
                 'cannon': { name: 'Pháo Thần Công', desc: 'Bắn Đá có thể bắn mù, soi sáng 5x5.', cost: 4, req: 'flare' },
                 'bravePawn': { name: 'Lính Quả Cảm', desc: 'Tốt được tăng khả năng đi thành 5 ô.', cost: 1, req: null },
                 'architect': { name: 'Kiến Trúc Sư', desc: 'Tốt có thể xây Tháp canh (Chạm & Giữ 0.6s).', cost: 3, req: 'bravePawn' },
+                'lumberjack': { name: 'Thợ Đốn Củi', desc: 'Tốt nhấp đúp để chặt rừng mùa xuân 3x3.', cost: 4, req: null },
                 'tame': { name: 'Thuần Phục', desc: 'Mở ra khả năng thuần phục động vật.', cost: 1, req: null },
                 'eagleFly': { name: 'Đại Bàng Cất Cánh', desc: 'Đại bàng tấn công xa 2 ô thay vì 1 ô.', cost: 4, req: null },
-                'royalDog': { name: 'Chó Hoàng Gia', desc: 'Chó Hoàng Gia tăng tầm tấn công lên 2 ô.', cost: 2, req: 'tame' },
-                'howl': { name: 'Tiếng Hú', desc: 'Chó/Chó Hoàng Gia di chuyển liên hoàn.', cost: 5, req: 'royalDog' },
+                'royalDog2': { name: 'Chó Hoàng Gia 2', desc: 'Tấn công 5x5, sủa 7x7, đánh theo đàn.', cost: 4, req: 'tame' },
+                'royalDog3': { name: 'Chó Hoàng Gia 3', desc: 'Sủa lộ diện địch tàng hình trong 7x7 (1 lượt).', cost: 4, req: 'royalDog2' },
                 'medusaUp': { name: 'Hóa Đá Medusa', desc: 'Địch trong 3x3 quanh Medusa bị hóa đá 1 lượt.', cost: 3, req: 'tame' },
-                'warElephant': { name: 'Giáp Voi Chiến', desc: 'Voi chiến đi 8 ô, tấn công 8 ô.', cost: 2, req: 'tame' },
+                'warElephant': { name: 'Giáp Voi Chiến', desc: 'Voi di chuyển 7 ô, ném đá ở ô thứ 7.', cost: 2, req: 'tame' },
                 'werewolf': { name: 'Người Sói', desc: 'Quân bị lây nhiễm biến thành Người Sói.', cost: 4, req: null },
                 'usurp': { name: 'Nhường Ngôi', desc: 'Khi Vua chết, 1 quân ngẫu nhiên lên làm Vua.', cost: 15, req: null },
                 'forecast': { name: 'Dự Báo', desc: 'Biết trước thời tiết của mùa tiếp theo.', cost: 5, req: null },
@@ -769,7 +770,10 @@
                         }
                     }
                 } else if (currentWeather === 'SinhSản') { spawnAnimals('p1', false); spawnAnimals('p2', false); } 
-                else if (currentWeather === 'TrăngMáu') { spawnBloodMoonWolves(); } 
+                else if (currentWeather === 'TrăngMáu') { 
+                    pieces.forEach(p => { if (p.infected === 'pending') p.infected = true; });
+                    spawnBloodMoonWolves(); 
+                } 
                 else if (currentWeather === 'Mưa' && isFantasticMode) {
                     if (Math.random() < 0.5) spawnShark('p1'); if (Math.random() < 0.5) spawnShark('p2');
                 }
@@ -785,7 +789,7 @@
                     for(let r=4; r<=11; r++) for(let c=3; c<=24; c++) if (mapData[r][c] === 'forest' && !hasPieceAt(r,c)) possible.push({r,c});
                     if(possible.length > 0) {
                         let loc = possible[Math.floor(Math.random()*possible.length)];
-                        pieces.push({ id: 'anim_' + Math.random().toString(36).substr(2,9), player: 'neutral', type: 'Sói', icon: '🐺', r: loc.r, c: loc.c, vision: 2 });
+                        pieces.push({ id: 'anim_' + Math.random().toString(36).substr(2,9), player: 'neutral', type: 'Sói', icon: '🐺', r: loc.r, c: loc.c, vision: 3 });
                     }
                 }
                 for(let i=0; i<count2; i++) {
@@ -793,7 +797,7 @@
                     for(let r=18; r<=25; r++) for(let c=3; c<=24; c++) if (mapData[r][c] === 'forest' && !hasPieceAt(r,c)) possible.push({r,c});
                     if(possible.length > 0) {
                         let loc = possible[Math.floor(Math.random()*possible.length)];
-                        pieces.push({ id: 'anim_' + Math.random().toString(36).substr(2,9), player: 'neutral', type: 'Sói', icon: '🐺', r: loc.r, c: loc.c, vision: 2 });
+                        pieces.push({ id: 'anim_' + Math.random().toString(36).substr(2,9), player: 'neutral', type: 'Sói', icon: '🐺', r: loc.r, c: loc.c, vision: 3 });
                     }
                 }
             }
@@ -839,7 +843,14 @@
                         let players = pieces.filter(p => p.player !== 'neutral' && !p.isDead && !p.carriedBy && !(currentWeather === 'VuaSầuRiêng' && p.type === 'Xe'));
                         if (isFantasticMode && currentWeather === 'TrăngMáu') {
                             players = players.filter(p => {
-                                let hasAura = pieces.some(dog => (dog.type === 'ChóHoàngGia' || dog.type === 'SóiHoàngGia') && dog.player === p.player && !dog.isDead && Math.max(Math.abs(dog.r - p.r), Math.abs(dog.c - p.c)) <= 3);
+                                let hasAura = pieces.some(dog => {
+                                    if (dog.player === p.player && !dog.isDead) {
+                                        let dist = Math.max(Math.abs(dog.r - p.r), Math.abs(dog.c - p.c));
+                                        if (dog.type === 'ChóHoàngGia' && dist <= 2) return true;
+                                        if (dog.type === 'SóiThần' && dist <= 3) return true;
+                                    }
+                                    return false;
+                                });
                                 return !hasAura;
                             });
                         }
@@ -902,7 +913,7 @@
                                     if (target && target.player !== 'neutral') {
                                         if (animal.type === 'Sói') {
                                             if (isFantasticMode && currentWeather === 'TrăngMáu') {
-                                                if (!target.infected && Math.random() <= 0.25) target.infected = true;
+                                                if (!target.infected && Math.random() <= 0.25) target.infected = 'pending';
                                                 killPieceAndPassengers(animal.id); 
                                             } else {
                                                 if (unlockedTechs[target.player]?.includes('werewolf')) {
@@ -1107,7 +1118,7 @@
                     <h2 style="color: #f1c40f; text-align: center; margin: 0 0 15px 0; text-shadow: 0 2px 5px #000; letter-spacing: 2px;">🛒 TÀNG KINH CÁC 🛒</h2>
                     <div class="tech-grid">`;
                 
-                const techIcons = { 'fly1': '🦅', 'fly2': '💨', 'fly3': '🌪️', 'attack1': '🔥', 'attack2': '💥', 'flare': '🎆', 'cannon': '💣', 'bravePawn': '🛡️', 'architect': '🗼', 'tame': '🐾', 'eagleFly': '👑', 'royalDog': '🐕', 'howl': '🗣️', 'medusaUp': '🐍', 'warElephant': '🐘', 'werewolf': '🐺', 'usurp': '🤴', 'forecast': '☁️', 'atv': '🚙', 'tank': '🚀', 'sniper': '🏹', 'superIntellect': '🧠', 'genius': '🧠✨' };
+                const techIcons = { 'fly1': '🦅', 'fly2': '💨', 'fly3': '🌪️', 'attack1': '🔥', 'attack2': '💥', 'flare': '🎆', 'cannon': '💣', 'bravePawn': '🛡️', 'architect': '🗼', 'tame': '🐾', 'eagleFly': '👑', 'royalDog2': '🐕‍🦺', 'royalDog3': '👁️', 'medusaUp': '🐍', 'warElephant': '🐘', 'werewolf': '🐺', 'usurp': '🤴', 'forecast': '☁️', 'atv': '🚙', 'tank': '🚀', 'sniper': '🏹', 'superIntellect': '🧠', 'genius': '🧠✨', 'lumberjack': '🪓' };
 
                 Object.keys(TECH_TREE).forEach(key => {
                     let tech = TECH_TREE[key];
@@ -1208,7 +1219,7 @@
 
                         let isCrowned = false;
                         if (effectiveType === 'ĐạiBàng' && unlockedTechs[p.player]?.includes('eagleFly')) isCrowned = true;
-                        if (effectiveType === 'ChóHoàngGia' && unlockedTechs[p.player]?.includes('royalDog')) isCrowned = true;
+                        if (effectiveType === 'ChóHoàngGia' && unlockedTechs[p.player]?.includes('royalDog2')) isCrowned = true;
                         if (effectiveType === 'VoiChiến' && unlockedTechs[p.player]?.includes('warElephant')) isCrowned = true;
                         if (effectiveType === 'Medusa' && unlockedTechs[p.player]?.includes('medusaUp')) isCrowned = true;
 
@@ -1225,7 +1236,9 @@
                         
                         if (['Chó', 'ChóHoàngGia'].includes(effectiveType)) {
                             let enemiesNear = pieces.some(ep => ep.player !== p.player && !ep.isDead && Math.max(Math.abs(ep.r - p.r), Math.abs(ep.c - p.c)) <= 3);
-                            if (enemiesNear) { let bark = document.createElement('span'); bark.className = 'bark-alert'; bark.innerText = '💢'; pieceDiv.appendChild(bark); }
+                            if (enemiesNear) { 
+                                let bark = document.createElement('span'); bark.className = 'bark-alert'; bark.innerText = '💢'; pieceDiv.appendChild(bark); 
+                            }
                         }
                     }
                 });
@@ -1402,8 +1415,8 @@
 
                     if (isFantasticMode && currentWeather === 'TrăngMáu') {
                         let rad = 1; 
-                        if (effectiveType === 'SóiThần') rad = 2; 
-                        if (effectiveType === 'NgườiSói') rad = 3; 
+                        if (effectiveType === 'SóiThần') rad = 3; 
+                        if (effectiveType === 'NgườiSói') rad = 2; 
                         if (effectiveType === 'ĐạiBàng') {
                             rad = 2; if (carrierT && ['Tháp', 'HọcViện'].includes(carrierT.type)) rad = 3; 
                         }
@@ -1471,7 +1484,7 @@
                     }
 
                     if (effectiveType === 'NgườiSói') {
-                        let rad = isFantasticMode && currentWeather === 'SươngMù' ? 0 : 3; 
+                        let rad = isFantasticMode && currentWeather === 'SươngMù' ? 0 : 2; 
                         for (let dr = -rad; dr <= rad; dr++) {
                             for (let dc = -rad; dc <= rad; dc++) {
                                 let nr = p.r + dr; let nc = p.c + dc;
@@ -1524,6 +1537,10 @@
                         if (effectiveType === 'Tốt' && isPieceInForest) v = 4;
                         if (isCarriedByThap) { if (effectiveType === 'ĐạiBàng') v = 9; if (effectiveType === 'BắnĐá') v = 6; }
                         if (isFantasticMode && currentWeather === 'SươngMù') v = 0;
+
+                        // Chó Hoàng Gia 3 - Sủa lộ địch 7x7
+                        if (effectiveType === 'ChóHoàngGia' && unlockedTechs[p.player]?.includes('royalDog3')) v = Math.max(v, 3);
+                        if (effectiveType === 'SóiThần') v = Math.max(v, 3);
 
                         let wrapAnimals = ['Sói', 'Voi', 'Chim', 'RắnChúa', 'Ngựa', 'Chó', 'ChóHoàngGia', 'SóiHoàngGia', 'SóiThần', 'VoiChiến', 'Medusa', 'NgườiSói'];
                         let isWrapPiece = ['Tốt', 'Mã', ...wrapAnimals].includes(effectiveType);
@@ -1581,14 +1598,21 @@
                 }
 
                 let effectiveType = piece.type;
-                if (isFantasticMode && piece.infected && currentWeather === 'TrăngMáu') effectiveType = 'NgườiSói';
+                if (isFantasticMode && piece.infected && currentWeather === 'TrăngMáu' && unlockedTechs[piece.player]?.includes('werewolf')) effectiveType = 'NgườiSói';
                 if (isFantasticMode && piece.type === 'SóiHoàngGia' && currentWeather === 'TrăngMáu') effectiveType = 'SóiThần';
 
                 if (effectiveType === 'Sói' && isAttack && isFantasticMode && currentWeather === 'TrăngMáu') {
                     let targetPiece = pieces.find(p => p.r === targetR && p.c === targetC && !p.isDead && p.carriedBy == null);
                     let targetPlayer = targetPiece ? targetPiece.player : null;
                     if (targetPlayer && targetPlayer !== 'neutral') {
-                        let hasAura = pieces.some(dog => dog.type === 'SóiHoàngGia' && dog.player === targetPlayer && !dog.isDead && Math.max(Math.abs(dog.r - targetPiece.r), Math.abs(dog.c - targetPiece.c)) <= 2);
+                        let hasAura = pieces.some(dog => {
+                            if (dog.player === targetPlayer && !dog.isDead) {
+                                let dist = Math.max(Math.abs(dog.r - targetPiece.r), Math.abs(dog.c - targetPiece.c));
+                                if (dog.type === 'ChóHoàngGia' && dist <= 2) return true;
+                                if (dog.type === 'SóiThần' && dist <= 3) return true;
+                            }
+                            return false;
+                        });
                         if (hasAura) return false;
                     }
                 }
@@ -1854,33 +1878,37 @@
                             else return distance <= 2 && pathClearCheck;
                         }
 
-                    case 'Chó': return Math.max(absR, effectiveAbsC) <= 5 && pathClearCheck;
-                    case 'ChóHoàngGia':
-                        let dRange = unlockedTechs[piece.player]?.includes('royalDog') ? 2 : 1;
-                        if (isAttack) return Math.max(absR, effectiveAbsC) <= dRange && pathClearCheck;
+                    case 'Chó': 
+                        if (piece.player === 'neutral') {
+                            return Math.max(absR, effectiveAbsC) <= 2 && pathClearCheck;
+                        }
                         return Math.max(absR, effectiveAbsC) <= 5 && pathClearCheck;
+                        
+                    case 'ChóHoàngGia':
+                        let isUpgraded = unlockedTechs[piece.player]?.includes('royalDog2');
+                        if (isUpgraded) {
+                            return Math.max(absR, effectiveAbsC) <= 2 && pathClearCheck; // Move 5x5, Attack 5x5
+                        } else {
+                            if (isAttack) return Math.max(absR, effectiveAbsC) <= 1 && pathClearCheck; // Attack 3x3
+                            return Math.max(absR, effectiveAbsC) <= 2 && pathClearCheck; // Move 5x5
+                        }
                         
                     case 'SóiHoàngGia':
                     case 'SóiThần':
-                        if (currentWeather === 'TrăngMáu') return Math.max(absR, effectiveAbsC) <= 3 && pathClearCheck;
-                        return Math.max(absR, effectiveAbsC) <= 5 && pathClearCheck;
+                        return Math.max(absR, effectiveAbsC) <= 2 && pathClearCheck;
 
-                    case 'VoiChiến':
-                        let isWarEleUpgraded = unlockedTechs[piece.player]?.includes('warElephant');
-                        if (isWarEleUpgraded) {
-                            let isStraight = (absR === 0 || effectiveAbsC === 0);
-                            if (!isStraight) return false;
-                            let vDist = Math.max(absR, effectiveAbsC);
-                            return vDist <= 8 && pathClearCheck;
-                        } else {
-                            if (absR !== 0 && effectiveAbsC !== 0) return false;
-                            return Math.max(absR, effectiveAbsC) <= 5 && pathClearCheck;
-                        }
                     case 'Voi':
-                        if (absR !== 0 && effectiveAbsC !== 0) return false;
-                        return Math.max(absR, effectiveAbsC) <= 5 && pathClearCheck;
+                    case 'VoiChiến':
+                        let isStraightDir = (absR === 0 || effectiveAbsC === 0);
+                        if (!isStraightDir) return false;
+                        let maxDist = (effType === 'VoiChiến') ? 7 : 6;
+                        return Math.max(absR, effectiveAbsC) <= maxDist && pathClearCheck;
 
                     case 'Sói':
+                        if (piece.player === 'neutral') {
+                            if (isAttack) return Math.max(absR, effectiveAbsC) <= 1 && pathClearCheck;
+                            return Math.max(absR, effectiveAbsC) <= 3 && pathClearCheck; // Move 7x7
+                        }
                         if (currentWeather === 'TrăngMáu') return Math.max(absR, effectiveAbsC) <= 3 && pathClearCheck;
                         return Math.max(absR, effectiveAbsC) <= 2 && pathClearCheck;
 
@@ -1894,9 +1922,8 @@
                         return Math.max(absR, effectiveAbsC) <= 8 && pathClearCheck;
                     
                     case 'NgườiSói':
-                        if (currentWeather === 'TrăngMáu') return Math.max(absR, effectiveAbsC) <= 3 && pathClearCheck;
-                        if (isAttack) return Math.max(absR, effectiveAbsC) <= 5 && pathClearCheck;
-                        return Math.max(absR, effectiveAbsC) <= 7 && pathClearCheck;
+                        if (isAttack) return Math.max(absR, effectiveAbsC) <= 2 && pathClearCheck;
+                        return Math.max(absR, effectiveAbsC) <= 3 && pathClearCheck;
                 }
                 return false;
             }
@@ -1995,6 +2022,37 @@
                 if (isReplaying || isGameOver || document.getElementById('promo-overlay')) return; 
 
                 let myPiecesAtCell = pieces.filter(p => p.r === r && p.c === c && p.player === localPlayerRole && !p.isDead && !(currentWeather === 'VuaSầuRiêng' && p.type === 'Xe'));
+                
+                let now = Date.now();
+                if (window.lastClickTime && window.lastClickCell === `${r},${c}` && (now - window.lastClickTime < 400)) {
+                    let myTot = myPiecesAtCell.find(p => p.type === 'Tốt' && !p.carriedBy);
+                    if (myTot && unlockedTechs[localPlayerRole]?.includes('lumberjack')) {
+                        function isSpringForest(fr, fc) {
+                            if (mapData[fr][fc] !== 'forest') return false;
+                            let isBase = ((fc >= 3 && fc <= 6) || (fc >= 21 && fc <= 24)) && ((fr >= 4 && fr <= 11) || (fr >= 18 && fr <= 25));
+                            return !isBase;
+                        }
+                        if (isSpringForest(r, c)) {
+                            for(let dr=-1; dr<=1; dr++){
+                                for(let dc=-1; dc<=1; dc++){
+                                    let nr = r+dr, nc = c+dc;
+                                    if (nr>=0 && nr<ROWS && nc>=0 && nc<COLS && isSpringForest(nr, nc)) {
+                                        mapData[nr][nc] = (nr + nc) % 2 === 0 ? 'ground-light' : 'ground-dark';
+                                        showExplosion(nr, nc); 
+                                    }
+                                }
+                            }
+                            rebuildBoardClasses();
+                            updateVision();
+                            myTot.hasMoved = true;
+                            finalizeTurn(myTot);
+                            return; 
+                        }
+                    }
+                }
+                window.lastClickTime = now;
+                window.lastClickCell = `${r},${c}`;
+
                 let enemyPiecesAtCell = pieces.filter(p => p.r === r && p.c === c && p.player !== localPlayerRole && !p.isDead && !(currentWeather === 'VuaSầuRiêng' && p.type === 'Xe'));
                 let currentSelected = pieces.find(p => p.id === selectedPieceId);
 
@@ -2161,21 +2219,29 @@
                     }
                 }
 
+                let isRangedElephant = false;
+                if (effType === 'Voi' || effType === 'VoiChiến') {
+                    let dist = Math.max(Math.abs(movingPiece.r - (targetPiece?.r || r)), Math.abs(movingPiece.c - (targetPiece?.c || c)));
+                    let maxRange = effType === 'VoiChiến' ? 7 : 6;
+                    if (isAttack && dist === maxRange) {
+                        isRangedElephant = true;
+                    }
+                }
+
+                if (isAttack && isRangedElephant) {
+                    killPieceAndPassengers(targetPiece.id);
+                    showExplosion(targetPiece.r, targetPiece.c);
+                    deadVisions.push({ r: targetPiece.r, c: targetPiece.c, radius: 1, player: movingPiece.player, turnsLeft: 2 });
+                    movingPiece.hasMoved = true;
+                    finalizeTurn(movingPiece);
+                    return;
+                }
+
                 if (isAttack && effType === 'Xe' && movingPiece.tankMode) {
                     killPieceAndPassengers(targetPiece.id);
                     showExplosion(targetPiece.r, targetPiece.c);
                     deadVisions.push({ r: targetPiece.r, c: targetPiece.c, radius: 2, player: movingPiece.player, turnsLeft: 2 }); 
                     movingPiece.hasMoved = true; finalizeTurn(movingPiece); return;
-                }
-
-                if (isAttack && effType === 'VoiChiến') {
-                    let dist = Math.max(Math.abs(movingPiece.r - targetPiece.r), Math.abs(movingPiece.c - targetPiece.c));
-                    if (dist > 4) { killPieceAndPassengers(targetPiece.id); showExplosion(targetPiece.r, targetPiece.c); movingPiece.hasMoved = true; finalizeTurn(movingPiece); return; }
-                }
-
-                if (isAttack && effType === 'Voi') {
-                    let dist = Math.max(Math.abs(movingPiece.r - targetPiece.r), Math.abs(movingPiece.c - targetPiece.c));
-                    if (dist > 3) { killPieceAndPassengers(targetPiece.id); showExplosion(targetPiece.r, targetPiece.c); movingPiece.hasMoved = true; finalizeTurn(movingPiece); return; }
                 }
 
                 if (isSwap) {
@@ -2356,7 +2422,7 @@
                 } 
                 
                 let isDogType = ['Chó', 'ChóHoàngGia'].includes(effType);
-                let hasHowl = unlockedTechs[movingPiece.player]?.includes('howl');
+                let hasHowl = unlockedTechs[movingPiece.player]?.includes('royalDog2');
 
                 if (isDogType && hasHowl) {
                     movingPiece.packMoved = true;
